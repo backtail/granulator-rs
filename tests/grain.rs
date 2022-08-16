@@ -26,18 +26,10 @@ fn check_bounds_envelope_sine() {
 
     for sample in &test_buffer {
         // check upper bound
-        check!(
-            *sample <= 1.0,
-            "Envelope grew bigger than 1 at position {}",
-            *sample
-        );
+        check!(*sample <= 1.0, "Envelope grew bigger than 1!");
 
         // check lower bound
-        check!(
-            *sample >= 0.0,
-            "Envelope got negative at position {}",
-            *sample
-        );
+        check!(*sample >= 0.0, "Envelope got negative!");
     }
 
     // last sample in buffer has to be 0 if envelope is finished
@@ -71,18 +63,10 @@ fn check_bounds_envelope_hamming() {
 
     for sample in &test_buffer {
         // check upper bound
-        check!(
-            *sample <= 1.0,
-            "Envelope grew bigger than 1 at position {}",
-            *sample
-        );
+        check!(*sample <= 1.0, "Envelope grew bigger than 1!");
 
         // check lower bound
-        check!(
-            *sample >= 0.0,
-            "Envelope got negative at position {}",
-            *sample
-        );
+        check!(*sample >= 0.0, "Envelope got negative!");
     }
 
     // last sample in buffer has to be 0 if envelope is finished
@@ -116,18 +100,10 @@ fn check_bounds_envelope_hann() {
 
     for sample in &test_buffer {
         // check upper bound
-        check!(
-            *sample <= 1.0,
-            "Envelope grew bigger than 1 at position {}",
-            *sample
-        );
+        check!(*sample <= 1.0, "Envelope grew bigger than 1!");
 
         // check lower bound
-        check!(
-            *sample >= 0.0,
-            "Envelope got negative at position {}",
-            *sample
-        );
+        check!(*sample >= 0.0, "Envelope got negative!");
     }
 
     // last sample in buffer has to be 0 if envelope is finished
