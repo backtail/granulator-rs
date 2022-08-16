@@ -19,7 +19,7 @@ impl WindowFunction {
     }
 
     fn hann_function(&self, position: f32, size: f32) -> f32 {
-        0.5 * F32::cos(F32::from(1.0 - ((TWO_PI * position) / size))).0
+        0.5 * (1.0 - F32::cos(F32::from((TWO_PI * position) / size)).0)
     }
 
     fn hamming_function(&self, position: f32, size: f32) -> f32 {
