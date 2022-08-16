@@ -78,9 +78,6 @@ fn check_bounds_envelope_sine() {
         );
     }
 
-    // print sine envelope buffer if true
-    check!(true, "{:?}", test_buffer);
-
     // last sample in buffer has to be 0 if envelope is finished
     check!(
         test_buffer[TEST_BUFFER_LENGTH - 1] == 0.0,
@@ -139,9 +136,6 @@ fn check_bounds_envelope_hamming() {
         );
     }
 
-    // print sine envelope buffer if true
-    check!(true, "{:?}", test_buffer);
-
     // last sample in buffer has to be 0 if envelope is finished
     check!(
         test_buffer[TEST_BUFFER_LENGTH - 1] == 0.0,
@@ -199,9 +193,6 @@ fn check_bounds_envelope_hann() {
             i
         );
     }
-
-    // print sine envelope buffer if true
-    check!(true, "{:?}", test_buffer);
 
     // last sample in buffer has to be 0 if envelope is finished
     check!(
