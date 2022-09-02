@@ -1,22 +1,44 @@
 use assert2::*;
-use granulator::{grain::Grain, scheduler, source, window_function};
+use granulator::manager::{Granulator, GRAINS};
+use std::time::Duration;
 
 #[test]
 fn spawn_grain() {
-    let mut grain = Grain::new(48000);
+    let m = Granulator::new();
 
-    // check if grain has not been activated yet
-    check!(grain.is_finished());
+    // lock
+    {
+        // check if grain has not been activated yet
+        check!(GRAINS.lock().get_mut(0).unwrap().is_finished());
+    }
+    m.scheduler.activate_grain(0);
 
-    scheduler::activate_grain(
-        &mut grain,
-        2.0,
-        0,
-        window_function::WindowFunction::Sine,
-        source::Source::Synthetic,
-        0,
-    );
+    // lock
+    {
+        // check if grain has started
+        check!(!GRAINS.lock().get_mut(0).unwrap().is_finished());
+    }
+}
 
-    // check if grain has started
-    check!(!grain.is_finished());
+#[test]
+fn delayed_spawn() {
+    let mut m = Granulator::new();
+
+    // activate grain with 10ms delay
+    m.scheduler.schedule_grain(0, Duration::from_millis(10));
+
+    for i in 0..10 {
+        m.scheduler.update_clock();
+
+        if i == 5 {
+            // check if grain has not been activated yet
+            check!(GRAINS.lock().get_mut(0).unwrap().is_finished());
+        }
+    }
+
+    // lock
+    {
+        // check if grain has been activated
+        check!(!GRAINS.lock().get_mut(0).unwrap().is_finished());
+    }
 }
