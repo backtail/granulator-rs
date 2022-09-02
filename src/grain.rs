@@ -1,31 +1,48 @@
 use super::source::Source;
 use super::window_function::WindowFunction;
 
+pub const DEFAULT_GRAIN: Grain = Grain {
+    window: None,
+    window_parameter: None,
+    envelope_position: 0,
+    envelope_value: 0.0,
+
+    source: None,
+    source_length: None,
+    source_offset: None,
+    relative_position: 0,
+    source_position: 0,
+
+    grain_size: None,
+    finished: true,
+    id: 0,
+};
+
 #[derive(Clone, Copy)]
 pub struct Grain {
     // envelope variables
-    window: Option<WindowFunction>,
-    window_parameter: Option<f32>,
-    envelope_position: u32,  // in samples between 0..grain_size
-    pub envelope_value: f32, // between 0..1
+    pub window: Option<WindowFunction>,
+    pub window_parameter: Option<f32>,
+    pub envelope_position: u32, // in samples between 0..grain_size
+    pub envelope_value: f32,    // between 0..1
 
     // source variables
-    source: Option<Source>,
-    source_length: Option<usize>,     // in samples
+    pub source: Option<Source>,
+    pub source_length: Option<usize>, // in samples
     pub source_offset: Option<usize>, // in samples
-    relative_position: usize,         // between 0..grain_size
+    pub relative_position: usize,     // between 0..grain_size
     pub source_position: usize,       // between source_offset..source_length
 
     // grain variables
-    grain_size: Option<f32>, // in samples
-    finished: bool,
+    pub grain_size: Option<f32>, // in samples
+    pub finished: bool,
 
     // misc
-    fs: usize,
+    pub id: usize,
 }
 
 impl Grain {
-    pub fn new(fs: usize) -> Self {
+    pub fn new() -> Self {
         Grain {
             window: None,
             window_parameter: None,
@@ -41,30 +58,11 @@ impl Grain {
             grain_size: None,
             finished: true,
 
-            fs,
+            id: 0,
         }
     }
 
-    pub fn activate(
-        &mut self,
-        grain_size: f32,
-        offset: usize,
-        window: WindowFunction,
-        source: Source,
-        source_length: usize,
-    ) {
-        // setting up envelope
-        self.window = Some(window);
-
-        // setting up source
-        self.source = Some(source);
-        self.source_offset = Some(offset);
-        self.source_length = Some(source_length);
-
-        // setting up grain
-        let size = (self.fs as f32 * grain_size) / 1000.0; // convert ms into samples
-
-        self.grain_size = Some(size);
+    pub fn activate(&mut self) {
         self.finished = false; // start grain
     }
 
@@ -117,5 +115,21 @@ impl Grain {
                 self.finished = true;
             }
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.window = None;
+        self.window_parameter = None;
+        self.envelope_position = 0;
+        self.envelope_value = 0.0;
+
+        self.source = None;
+        self.source_length = None;
+        self.source_offset = None;
+        self.relative_position = 0;
+        self.source_position = 0;
+
+        self.grain_size = Some(0.0);
+        self.finished = true;
     }
 }
