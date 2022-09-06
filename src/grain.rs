@@ -18,7 +18,7 @@ pub const DEFAULT_GRAIN: Grain = Grain {
     id: 0,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Grain {
     // envelope variables
     pub window: Option<WindowFunction>,
@@ -42,7 +42,7 @@ pub struct Grain {
 }
 
 impl Grain {
-    pub fn new() -> Self {
+    pub fn new(id: usize) -> Self {
         Grain {
             window: None,
             window_parameter: None,
@@ -58,7 +58,7 @@ impl Grain {
             grain_size: None,
             finished: true,
 
-            id: 0,
+            id,
         }
     }
 
