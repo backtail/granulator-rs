@@ -1,51 +1,38 @@
+mod index_mapping;
+
 use assert2::*;
-use granulator::manager::{Granulator, GRAINS};
+use granulator::grain_vector::*;
+use granulator::scheduler::Scheduler;
+use index_mapping::get_new_index;
 use std::time::Duration;
 
 #[test]
 fn spawn_grain() {
-    let m = Granulator::new();
-
-    // lock
-    {
-        // check if grain has not been activated yet
-        check!(GRAINS.lock().get_mut(1).unwrap().is_finished());
-    }
-    m.scheduler.activate_grain(1);
-
-    // lock
-    {
-        // check if grain has started
-        check!(!GRAINS.lock().get_mut(1).unwrap().is_finished());
-    }
+    let s = Scheduler::new();
+    check!(s.activate_grain(get_new_index()).is_ok());
 }
 
 #[test]
 fn delayed_spawn() {
-    let mut m = Granulator::new();
+    let delay = 1000;
 
-    // activate grain with 10ms delay
-    m.scheduler.schedule_grain(0, Duration::from_millis(10));
+    let mut s = Scheduler::new();
 
-    for i in 0..9 {
-        m.scheduler.update_clock();
+    let index = get_new_index();
 
-        // check if grain has not been activated yet
-        check!(
-            GRAINS.lock().get_mut(0).unwrap().is_finished(),
-            "At time {}ms",
-            i
-        );
+    // schedule new grain
+    check!(s
+        .schedule_grain(index, Duration::from_millis(delay))
+        .is_ok());
+
+    for _ in 0..delay - 1 {
+        s.update_clock();
+
+        check!(get_grain(index).err().expect("Should be the index!") == index);
     }
 
-    m.scheduler.update_clock();
+    s.update_clock();
 
-    // lock
-    {
-        // check if grain has been activated
-        check!(
-            !GRAINS.lock().get_mut(0).unwrap().is_finished(),
-            "Grain has not been activated after delay!"
-        );
-    }
+    let should_be_finished = get_grain(index).unwrap().is_finished();
+    check!(should_be_finished);
 }
