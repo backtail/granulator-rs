@@ -9,14 +9,14 @@ fn spawn_grain() {
     // lock
     {
         // check if grain has not been activated yet
-        check!(GRAINS.lock().get_mut(0).unwrap().is_finished());
+        check!(GRAINS.lock().get_mut(1).unwrap().is_finished());
     }
-    m.scheduler.activate_grain(0);
+    m.scheduler.activate_grain(1);
 
     // lock
     {
         // check if grain has started
-        check!(!GRAINS.lock().get_mut(0).unwrap().is_finished());
+        check!(!GRAINS.lock().get_mut(1).unwrap().is_finished());
     }
 }
 
@@ -27,18 +27,25 @@ fn delayed_spawn() {
     // activate grain with 10ms delay
     m.scheduler.schedule_grain(0, Duration::from_millis(10));
 
-    for i in 0..10 {
+    for i in 0..9 {
         m.scheduler.update_clock();
 
-        if i == 5 {
-            // check if grain has not been activated yet
-            check!(GRAINS.lock().get_mut(0).unwrap().is_finished());
-        }
+        // check if grain has not been activated yet
+        check!(
+            GRAINS.lock().get_mut(0).unwrap().is_finished(),
+            "At time {}ms",
+            i
+        );
     }
+
+    m.scheduler.update_clock();
 
     // lock
     {
         // check if grain has been activated
-        check!(!GRAINS.lock().get_mut(0).unwrap().is_finished());
+        check!(
+            !GRAINS.lock().get_mut(0).unwrap().is_finished(),
+            "Grain has not been activated after delay!"
+        );
     }
 }
