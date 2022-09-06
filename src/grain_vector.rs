@@ -6,15 +6,12 @@ use spin::{Lazy, Mutex};
 
 // library specific
 use crate::grain::Grain;
+use crate::manager::MAX_GRAINS;
 
 // ==========================
 // INITIALZATION OF SINGLETON
 // ==========================
 
-// max amount of simultanious grains
-pub const MAX_GRAINS: usize = 64;
-
-// singleton
 #[derive(Debug)]
 pub struct Grains {
     pub grains: Mutex<Vec<Grain, MAX_GRAINS>>,
@@ -51,7 +48,7 @@ pub fn push_grain(id: usize) -> Result<(), Grain> {
     Grains::get_instance().grains.lock().push(Grain::new(id))
 }
 
-pub fn remove_grain(id: usize) -> Result<Grain, ()> {
+pub fn remove_grain(id: usize) -> Result<Grain, usize> {
     let singleton = Grains::get_instance();
     let mut grains = singleton.grains.lock();
 
@@ -62,5 +59,24 @@ pub fn remove_grain(id: usize) -> Result<Grain, ()> {
     }
 
     // when no element has been removed return an Err
-    Err(())
+    Err(id)
+}
+
+pub fn get_grain(id: usize) -> Result<Grain, usize> {
+    let singleton = Grains::get_instance();
+    let grains = singleton.grains.lock();
+
+    for position in 0..grains.len() {
+        let current_grain = grains.get(position).unwrap();
+        if current_grain.id == id {
+            return Ok(current_grain.clone());
+        }
+    }
+
+    // when no element has been found
+    Err(id)
+}
+
+pub fn flush_grains() {
+    Grains::get_instance().grains.lock().clear();
 }
