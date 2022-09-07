@@ -1,23 +1,6 @@
 use super::source::Source;
 use super::window_function::WindowFunction;
 
-pub const DEFAULT_GRAIN: Grain = Grain {
-    window: None,
-    window_parameter: None,
-    envelope_position: 0,
-    envelope_value: 0.0,
-
-    source: None,
-    source_length: None,
-    source_offset: None,
-    relative_position: 0,
-    source_position: 0,
-
-    grain_size: None,
-    finished: true,
-    id: 0,
-};
-
 #[derive(Clone, Copy, Debug)]
 pub struct Grain {
     // envelope variables
