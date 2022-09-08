@@ -5,7 +5,7 @@ use super::window_function::WindowFunction;
 #[derive(Clone, Copy, Debug)]
 pub struct Grain {
     // envelope variables
-    pub window: Option<WindowFunction>,
+    pub window: WindowFunction,
     pub window_parameter: Option<f32>,
     pub envelope_position: u32, // in samples between 0..grain_size
     pub envelope_value: f32,    // between 0..1
@@ -28,7 +28,7 @@ pub struct Grain {
 impl Grain {
     pub fn new(id: usize) -> Self {
         Grain {
-            window: None,
+            window: WindowFunction::Sine,
             window_parameter: None,
             envelope_position: 0,
             envelope_value: 0.0,
@@ -57,9 +57,10 @@ impl Grain {
     pub fn update_envelope(&mut self) {
         if !self.finished {
             let current_position = self.envelope_position as f32;
-            self.envelope_value = self.window.as_ref().unwrap().get_envelope_value(
+
+            self.envelope_value = self.window.get_envelope_value(
                 current_position,
-                self.grain_size.unwrap(),
+                self.grain_size,
                 self.window_parameter,
             );
 
@@ -89,21 +90,5 @@ impl Grain {
                 self.finished = true;
             }
         }
-    }
-
-    pub fn reset(&mut self) {
-        self.window = None;
-        self.window_parameter = None;
-        self.envelope_position = 0;
-        self.envelope_value = 0.0;
-
-        self.source = None;
-        self.source_length = None;
-        self.source_offset = None;
-        self.relative_position = 0;
-        self.source_position = 0;
-
-        self.grain_size = Some(0.0);
-        self.finished = true;
     }
 }
