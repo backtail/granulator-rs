@@ -1,3 +1,4 @@
+use super::manager::FS;
 use super::source::Source;
 use super::window_function::WindowFunction;
 
@@ -17,7 +18,7 @@ pub struct Grain {
     pub source_position: usize,       // between source_offset..source_length
 
     // grain variables
-    pub grain_size: Option<f32>, // in samples
+    grain_size: f32, // in samples
     pub finished: bool,
 
     // misc
@@ -38,28 +39,19 @@ impl Grain {
             relative_position: 0,
             source_position: 0,
 
-            grain_size: None,
-            finished: true,
+            grain_size: 1.0,
+            finished: false,
 
             id,
         }
     }
 
-    pub fn activate(&mut self) {
-        self.finished = false; // start grain
+    pub fn set_grain_size(&mut self, size_in_ms: f32) {
+        self.grain_size = (FS as f32 * size_in_ms) / 1000.0;
     }
 
-    pub fn is_finished(&mut self) -> bool {
-        self.finished
-    }
-
-    pub fn reactivate(&mut self) {
-        self.envelope_position = 0;
-        self.envelope_value = 0.0;
-        self.relative_position = 0;
-        self.source_position = self.source_offset.unwrap();
-
-        self.finished = false;
+    pub fn get_grain_size_in_samples(&self) -> usize {
+        self.grain_size as usize
     }
 
     pub fn update_envelope(&mut self) {
@@ -70,7 +62,8 @@ impl Grain {
                 self.grain_size.unwrap(),
                 self.window_parameter,
             );
-            if current_position < self.grain_size.unwrap() {
+
+            if current_position < self.grain_size {
                 self.envelope_position += 1;
             } else {
                 self.finished = true;
@@ -91,9 +84,7 @@ impl Grain {
                 .as_ref()
                 .unwrap()
                 .get_source_sample(self.relative_position, self.source_offset.unwrap());
-            if self.source_position
-                > self.source_length.unwrap() - self.grain_size.unwrap() as usize
-            {
+            if self.source_position > self.source_length.unwrap() - self.grain_size as usize {
                 self.source_position = self.source_offset.unwrap();
                 self.finished = true;
             }
