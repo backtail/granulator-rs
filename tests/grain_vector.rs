@@ -1,8 +1,8 @@
-mod index_mapping;
+mod util;
 
 use assert2::*;
 use granulator::grain_vector::*;
-use index_mapping::get_new_index;
+use util::*;
 
 #[test]
 fn push_and_remove_a_grain() {
@@ -11,6 +11,8 @@ fn push_and_remove_a_grain() {
     check!(push_grain(id).is_ok());
 
     check!(remove_grain(id).is_ok());
+
+    check!(get_grain(id).is_err());
 }
 
 #[test]
@@ -28,12 +30,35 @@ fn remove_grain_from_empty_vector() {
 }
 
 #[test]
-fn get_a_grain() {
+fn get_a_default_grain() {
     let id = get_new_index();
 
     check!(push_grain(id).is_ok());
 
     check!(get_grain(id).is_ok());
+
+    flush_grains();
+}
+
+#[test]
+fn is_a_grain_finished() {
+    let id = get_new_index();
+
+    // setup grain and audio callback length
+    check!(push_grain(id).is_ok());
+    check!(setup_grain_only_with_window_funtion(id, 1.0).is_ok());
+    const BUFFER_LENGTH: usize = 512;
+
+    // grain size needs to be smaller than buffer length for it to finish in one callback
+    check!(get_grain(id).unwrap().get_grain_size_in_samples() < BUFFER_LENGTH);
+
+    // simulate audio callback
+    for _ in 0..BUFFER_LENGTH {
+        update_envolopes();
+    }
+
+    // grain should be finished
+    check!(get_grain(id).unwrap().finished);
 
     flush_grains();
 }

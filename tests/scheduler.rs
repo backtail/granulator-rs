@@ -1,15 +1,17 @@
-mod index_mapping;
+mod util;
 
 use assert2::*;
 use granulator::grain_vector::*;
 use granulator::scheduler::Scheduler;
-use index_mapping::get_new_index;
 use std::time::Duration;
+use util::*;
 
 #[test]
 fn spawn_grain() {
     let s = Scheduler::new();
     check!(s.activate_grain(get_new_index()).is_ok());
+
+    flush_grains();
 }
 
 #[test]
@@ -33,6 +35,37 @@ fn delayed_spawn() {
 
     s.update_clock();
 
-    let should_be_finished = get_grain(index).unwrap().is_finished();
-    check!(should_be_finished);
+    check!(get_grain(index).is_ok());
+
+    flush_grains();
+}
+
+#[test]
+fn automated_removal_of_a_finished_grain() {
+    let mut s = Scheduler::new();
+    let id = get_new_index();
+
+    // immediatly start grain and update clock to spawn the grain
+    check!(s.schedule_grain(id, Duration::ZERO).is_ok());
+    s.update_clock();
+
+    // setup grain and buffer size
+    check!(setup_grain_only_with_window_funtion(id, 1.0).is_ok());
+    const BUFFER_LENGTH: usize = 512;
+
+    // grain size needs to be smaller than buffer length for it to finish in one callback
+    check!(get_grain(id).unwrap().get_grain_size_in_samples() < BUFFER_LENGTH);
+
+    // simulate audio callback
+    for _ in 0..BUFFER_LENGTH {
+        update_envolopes();
+    }
+
+    // grain should exist before clock update
+    check!(get_grain(id).ok().is_some());
+
+    s.update_clock();
+
+    // grain should be removed after clock update
+    check!(get_grain(id).err().is_some());
 }
