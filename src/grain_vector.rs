@@ -53,8 +53,11 @@ pub fn remove_grain(id: usize) -> Result<Grain, usize> {
     let mut grains = singleton.grains.lock();
 
     for position in 0..grains.len() {
-        if grains.get(position).unwrap().id == id {
-            return Ok(grains.swap_remove(position));
+        let real_grain = grains.get(position);
+        if real_grain.is_some() {
+            if real_grain.unwrap().id == id {
+                return Ok(grains.remove(position));
+            }
         }
     }
 
