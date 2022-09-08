@@ -3,7 +3,7 @@ use super::source::Source;
 use super::window_function::WindowFunction;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Grain {
+pub struct Grain<'a> {
     // envelope variables
     pub window: WindowFunction,
     pub window_parameter: Option<f32>,
@@ -11,7 +11,8 @@ pub struct Grain {
     pub envelope_value: f32,    // between 0..1
 
     // source variables
-    pub source: Option<Source>,
+    pub source: Source,
+    pub source_material: &'a [f32],
     pub source_length: Option<usize>, // in samples
     pub source_offset: Option<usize>, // in samples
     pub relative_position: usize,     // between 0..grain_size
@@ -25,15 +26,16 @@ pub struct Grain {
     pub id: usize,
 }
 
-impl Grain {
-    pub fn new(id: usize) -> Self {
+impl<'a> Grain<'a> {
+    pub fn new(id: usize, source_material: &'a [f32]) -> Self {
         Grain {
             window: WindowFunction::Sine,
             window_parameter: None,
             envelope_position: 0,
             envelope_value: 0.0,
 
-            source: None,
+            source: Source::AudioFile,
+            source_material,
             source_length: None,
             source_offset: None,
             relative_position: 0,
@@ -82,8 +84,6 @@ impl Grain {
             self.relative_position += 4;
             self.source_position = self
                 .source
-                .as_ref()
-                .unwrap()
                 .get_source_sample(self.relative_position, self.source_offset.unwrap());
             if self.source_position > self.source_length.unwrap() - self.grain_size as usize {
                 self.source_position = self.source_offset.unwrap();

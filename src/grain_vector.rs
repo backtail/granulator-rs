@@ -10,20 +10,22 @@ use crate::manager::MAX_GRAINS;
 use crate::source::Source;
 use crate::window_function::WindowFunction;
 
+static MOCK_ARRAY: [f32; 48] = [1.0_f32; 48];
+
 // ==========================
 // INITIALZATION OF SINGLETON
 // ==========================
 
 #[derive(Debug)]
-pub struct Grains {
-    pub grains: Mutex<Vec<Grain, MAX_GRAINS>>,
+pub struct Grains<'a> {
+    pub grains: Mutex<Vec<Grain<'a>, MAX_GRAINS>>,
 }
 
 // figure out memory size for MAX_GRAINS
 static mut MEMORY_SIZE: MaybeUninit<[Node<ArcInner<Grains>>; 1]> = MaybeUninit::uninit();
 
 // create pool type
-arc_pool!(GrainPool: Grains);
+arc_pool!(GrainPool: Grains<'static>);
 
 // grow the pool
 static GRAIN_POOL: Lazy<Arc<GrainPool>> = Lazy::new(|| {
@@ -36,7 +38,7 @@ static GRAIN_POOL: Lazy<Arc<GrainPool>> = Lazy::new(|| {
     .expect("Out of Memory!")
 });
 
-impl Grains {
+impl<'a> Grains<'a> {
     pub fn get_instance() -> Arc<GrainPool> {
         GRAIN_POOL.clone()
     }
@@ -46,11 +48,14 @@ impl Grains {
 // SINGLETON API
 // =============
 
-pub fn push_grain(id: usize) -> Result<(), Grain> {
-    Grains::get_instance().grains.lock().push(Grain::new(id))
+pub fn push_grain<'a>(id: usize) -> Result<(), Grain<'a>> {
+    Grains::get_instance()
+        .grains
+        .lock()
+        .push(Grain::new(id, &MOCK_ARRAY[..]))
 }
 
-pub fn remove_grain(id: usize) -> Result<Grain, usize> {
+pub fn remove_grain<'a>(id: usize) -> Result<Grain<'a>, usize> {
     let singleton = Grains::get_instance();
     let mut grains = singleton.grains.lock();
 
@@ -67,7 +72,7 @@ pub fn remove_grain(id: usize) -> Result<Grain, usize> {
     Err(id)
 }
 
-pub fn get_grain(id: usize) -> Result<Grain, usize> {
+pub fn get_grain<'a>(id: usize) -> Result<Grain<'a>, usize> {
     let singleton = Grains::get_instance();
     let grains = singleton.grains.lock();
 
@@ -128,7 +133,7 @@ pub fn set_grain_parameters(
             current_grain.set_grain_size(size_in_ms);
             current_grain.window = window;
             current_grain.window_parameter = window_paramater;
-            current_grain.source = Some(source);
+            current_grain.source = source;
             current_grain.source_length = source_length;
             current_grain.source_offset = source_offset;
             return Ok(());
