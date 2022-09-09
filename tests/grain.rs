@@ -1,5 +1,37 @@
-// use assert2::*;
-// use granulator::{grain::Grain, manager::FS, window_function::WindowFunction};
+mod util;
+
+use assert2::*;
+use granulator::grain_vector::*;
+use util::*;
+
+#[test]
+fn source_should_wrap_around() {
+    let id = get_new_index();
+
+    // setup audio callback length
+    check!(push_grain(id).is_ok());
+    const BUFFER_LENGTH: usize = 512;
+
+    // grain size needs to be much smaller than buffer length for it to wrap many times around in one callback
+    check!(get_grain(id).unwrap().get_grain_size_in_samples() * 4 < BUFFER_LENGTH);
+
+    // setup test variables
+    let first_source_position = 0.0;
+    let mut wrap_counter = 0;
+
+    // simulate audio callback
+    for _ in 0..BUFFER_LENGTH {
+        update_source_samples();
+        if get_grain(id).unwrap().source_position == first_source_position {
+            wrap_counter += 1;
+        }
+    }
+
+    // source should have wrapped arounf many times
+    check!(wrap_counter > 1);
+
+    flush_grains();
+}
 
 // const TEST_GRAIN_SIZE_IN_MS: f32 = 0.9;
 // const TEST_GRAIN_SIZE_IN_SAMPLES: f32 = (TEST_GRAIN_SIZE_IN_MS * FS as f32) / 1000.0;
