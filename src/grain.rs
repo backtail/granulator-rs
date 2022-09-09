@@ -76,15 +76,15 @@ impl<'a> Grain<'a> {
             // move playhead
             self.source_position += 1.0;
 
+            // wrap around
+            if self.source_position >= self.grain_length - 1.0 {
+                self.source_position -= self.grain_length;
+            }
+
             // interpolate source value
             self.source_value = self
                 .source
                 .get_source_sample_f32(self.source_material, self.source_position);
-
-            // wrap around
-            if self.source_position > self.grain_length {
-                self.source_position -= self.grain_length;
-            }
         }
     }
 }
