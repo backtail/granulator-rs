@@ -121,3 +121,22 @@ pub fn update_source_samples() {
         grains.get_mut(position).unwrap().update_source_sample();
     }
 }
+
+pub fn get_next_sample() -> f32 {
+    let singleton = Grains::get_instance();
+    let mut grains = singleton.grains.lock();
+
+    let mut sample = 0.0_f32;
+    let num_of_grains = grains.len();
+
+    for position in 0..num_of_grains {
+        sample += grains.get_mut(position).unwrap().get_next_sample();
+    }
+
+    // ============
+    // TODO
+    // ============
+    //
+    // better mixing algorithm
+    sample / num_of_grains as f32
+}

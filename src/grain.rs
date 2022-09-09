@@ -52,7 +52,7 @@ impl<'a> Grain<'a> {
         self.grain_length as usize
     }
 
-    pub fn update_envelope(&mut self) {
+    pub fn update_envelope(&mut self) -> f32 {
         if !self.finished {
             // calcualte new value
             self.envelope_value = self.window.get_envelope_value(
@@ -69,9 +69,11 @@ impl<'a> Grain<'a> {
                 self.envelope_value = 0.0;
             }
         }
+
+        self.envelope_value
     }
 
-    pub fn update_source_sample(&mut self) {
+    pub fn update_source_sample(&mut self) -> f32 {
         if !self.finished {
             // move playhead
             self.source_position += 1.0;
@@ -86,6 +88,8 @@ impl<'a> Grain<'a> {
                 .source
                 .get_source_sample_f32(self.source_material, self.source_position);
         }
+
+        self.source_value
     }
 
     pub fn get_next_sample(&mut self) -> f32 {
