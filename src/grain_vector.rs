@@ -112,3 +112,12 @@ pub fn update_envolopes() {
         grains.get_mut(position).unwrap().update_envelope();
     }
 }
+
+pub fn update_source_samples() {
+    let singleton = Grains::get_instance();
+    let mut grains = singleton.grains.lock();
+
+    for position in 0..grains.len() {
+        grains.get_mut(position).unwrap().update_source_sample();
+    }
+}
