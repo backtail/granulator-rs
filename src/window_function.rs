@@ -1,7 +1,6 @@
 use micromath::F32;
 
-const PI: f32 = 3.141592653589793;
-const TWO_PI: f32 = 6.2831853071795864;
+use super::audio_tools::{PI, TWO_PI};
 
 #[derive(Clone, Copy, Debug)]
 pub enum WindowFunction {

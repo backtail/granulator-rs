@@ -7,3 +7,5 @@ pub mod manager;
 pub mod scheduler;
 pub mod source;
 pub mod window_function;
+
+pub mod audio_tools;
