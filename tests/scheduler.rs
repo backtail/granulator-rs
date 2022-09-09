@@ -57,7 +57,7 @@ fn automated_removal_of_a_finished_grain() {
 
     // simulate audio callback
     for _ in 0..BUFFER_LENGTH {
-        update_envolopes();
+        get_next_sample();
     }
 
     // grain should exist before clock update

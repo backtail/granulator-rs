@@ -21,7 +21,7 @@ fn source_should_wrap_around() {
 
     // simulate audio callback
     for _ in 0..BUFFER_LENGTH {
-        update_source_samples();
+        get_next_sample();
         if get_grain(id).unwrap().source_position == first_source_position {
             wrap_counter += 1;
         }

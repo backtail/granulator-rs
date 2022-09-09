@@ -53,7 +53,7 @@ fn is_a_grain_finished() {
 
     // simulate audio callback
     for _ in 0..BUFFER_LENGTH {
-        update_envolopes();
+        get_next_sample();
     }
 
     // grain should be finished
