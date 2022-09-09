@@ -87,4 +87,8 @@ impl<'a> Grain<'a> {
                 .get_source_sample_f32(self.source_material, self.source_position);
         }
     }
+
+    pub fn get_next_sample(&mut self) -> f32 {
+        self.update_envelope() * self.update_source_sample()
+    }
 }
