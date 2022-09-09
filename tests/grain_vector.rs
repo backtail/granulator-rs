@@ -44,9 +44,8 @@ fn get_a_default_grain() {
 fn is_a_grain_finished() {
     let id = get_new_index();
 
-    // setup grain and audio callback length
+    // setup audio callback length
     check!(push_grain(id).is_ok());
-    check!(setup_grain_only_with_window_funtion(id, 1.0).is_ok());
     const BUFFER_LENGTH: usize = 512;
 
     // grain size needs to be smaller than buffer length for it to finish in one callback

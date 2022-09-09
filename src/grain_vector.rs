@@ -7,8 +7,6 @@ use spin::{Lazy, Mutex};
 // library specific
 use crate::grain::Grain;
 use crate::manager::MAX_GRAINS;
-use crate::source::Source;
-use crate::window_function::WindowFunction;
 
 static MOCK_ARRAY: [f32; 48] = [1.0_f32; 48];
 
@@ -113,33 +111,4 @@ pub fn update_envolopes() {
     for position in 0..grains.len() {
         grains.get_mut(position).unwrap().update_envelope();
     }
-}
-
-pub fn set_grain_parameters(
-    id: usize,
-    size_in_ms: f32,
-    window: WindowFunction,
-    window_paramater: Option<f32>,
-    source: Source,
-    source_length: Option<usize>,
-    source_offset: Option<usize>,
-) -> Result<(), usize> {
-    let singleton = Grains::get_instance();
-    let mut grains = singleton.grains.lock();
-
-    for position in 0..grains.len() {
-        let current_grain = grains.get_mut(position).unwrap();
-        if current_grain.id == id {
-            current_grain.set_grain_size(size_in_ms);
-            current_grain.window = window;
-            current_grain.window_parameter = window_paramater;
-            current_grain.source = source;
-            current_grain.source_length = source_length;
-            current_grain.source_offset = source_offset;
-            return Ok(());
-        }
-    }
-
-    // when no element has been found
-    Err(id)
 }

@@ -7,19 +7,17 @@ pub struct Grain<'a> {
     // envelope variables
     pub window: WindowFunction,
     pub window_parameter: Option<f32>,
-    pub envelope_position: u32, // in samples between 0..grain_size
+    pub envelope_position: f32, // between 0..grain_length (in samples)
     pub envelope_value: f32,    // between 0..1
 
     // source variables
     pub source: Source,
     pub source_material: &'a [f32],
-    pub source_length: Option<usize>, // in samples
-    pub source_offset: Option<usize>, // in samples
-    pub relative_position: usize,     // between 0..grain_size
-    pub source_position: usize,       // between source_offset..source_length
+    pub source_position: f32, // between 0..grain_length (in samples)
+    pub source_value: f32,    // between 0..1
 
     // grain variables
-    grain_size: f32, // in samples
+    pub grain_length: f32, // in samples
     pub finished: bool,
 
     // misc
@@ -31,17 +29,15 @@ impl<'a> Grain<'a> {
         Grain {
             window: WindowFunction::Sine,
             window_parameter: None,
-            envelope_position: 0,
+            envelope_position: 0.0,
             envelope_value: 0.0,
 
             source: Source::AudioFile,
             source_material,
-            source_length: None,
-            source_offset: None,
-            relative_position: 0,
-            source_position: 0,
+            source_position: 0.0,
+            source_value: 0.0,
 
-            grain_size: 1.0,
+            grain_length: source_material.len() as f32,
             finished: false,
 
             id,
@@ -49,25 +45,25 @@ impl<'a> Grain<'a> {
     }
 
     pub fn set_grain_size(&mut self, size_in_ms: f32) {
-        self.grain_size = (FS as f32 * size_in_ms) / 1000.0;
+        self.grain_length = (FS as f32 * size_in_ms) / 1000.0;
     }
 
     pub fn get_grain_size_in_samples(&self) -> usize {
-        self.grain_size as usize
+        self.grain_length as usize
     }
 
     pub fn update_envelope(&mut self) {
         if !self.finished {
-            let current_position = self.envelope_position as f32;
-
+            // calcualte new value
             self.envelope_value = self.window.get_envelope_value(
-                current_position,
-                self.grain_size,
+                self.envelope_position,
+                self.grain_length,
                 self.window_parameter,
             );
 
-            if current_position < self.grain_size {
-                self.envelope_position += 1;
+            // finish grain if it reaches end
+            if self.envelope_position < self.grain_length {
+                self.envelope_position += 1.0;
             } else {
                 self.finished = true;
                 self.envelope_value = 0.0;
@@ -75,19 +71,19 @@ impl<'a> Grain<'a> {
         }
     }
 
-    // TODO
-    // many parameters may be calculated before creating the grain
-
-    // if offset + size > length { doesn't fitclear -> find new position }
     pub fn update_source_sample(&mut self) {
         if !self.finished {
-            self.relative_position += 4;
-            self.source_position = self
+            // move playhead
+            self.source_position += 1.0;
+
+            // interpolate source value
+            self.source_value = self
                 .source
-                .get_source_sample(self.relative_position, self.source_offset.unwrap());
-            if self.source_position > self.source_length.unwrap() - self.grain_size as usize {
-                self.source_position = self.source_offset.unwrap();
-                self.finished = true;
+                .get_source_sample_f32(self.source_material, self.source_position);
+
+            // wrap around
+            if self.source_position > self.grain_length {
+                self.source_position -= self.grain_length;
             }
         }
     }

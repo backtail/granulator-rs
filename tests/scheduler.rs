@@ -49,8 +49,7 @@ fn automated_removal_of_a_finished_grain() {
     check!(s.schedule_grain(id, Duration::ZERO).is_ok());
     s.update_clock();
 
-    // setup grain and buffer size
-    check!(setup_grain_only_with_window_funtion(id, 1.0).is_ok());
+    // setup buffer size
     const BUFFER_LENGTH: usize = 512;
 
     // grain size needs to be smaller than buffer length for it to finish in one callback
