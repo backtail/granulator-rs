@@ -33,6 +33,68 @@ fn source_should_wrap_around() {
     flush_grains();
 }
 
+#[test]
+fn check_envelope_value_bounds() {
+    let id = get_new_index();
+
+    // setup audio callback length
+    check!(push_grain(id).is_ok());
+    const BUFFER_LENGTH: usize = 512;
+
+    // grain size needs to be much smaller than buffer length for it to wrap many times around in one callback
+    check!(get_grain(id).unwrap().get_grain_size_in_samples() * 4 < BUFFER_LENGTH);
+
+    // simulate audio callback
+    for _ in 0..BUFFER_LENGTH {
+        let sample = get_grain(id).unwrap().update_envelope();
+        check!(sample <= 1.0, "Sample is greather than 1.0!");
+        check!(sample >= -1.0, "Sample is smaller than -1.0!");
+    }
+
+    flush_grains();
+}
+
+#[test]
+fn check_source_sample_bounds() {
+    let id = get_new_index();
+
+    // setup audio callback length
+    check!(push_grain(id).is_ok());
+    const BUFFER_LENGTH: usize = 512;
+
+    // grain size needs to be much smaller than buffer length for it to wrap many times around in one callback
+    check!(get_grain(id).unwrap().get_grain_size_in_samples() * 4 < BUFFER_LENGTH);
+
+    // simulate audio callback
+    for _ in 0..BUFFER_LENGTH {
+        let sample = get_grain(id).unwrap().update_source_sample();
+        check!(sample <= 1.0, "Sample is greather than 1.0!");
+        check!(sample >= -1.0, "Sample is smaller than -1.0!");
+    }
+
+    flush_grains();
+}
+
+#[test]
+fn check_next_sample_bounds() {
+    let id = get_new_index();
+
+    // setup audio callback length
+    check!(push_grain(id).is_ok());
+    const BUFFER_LENGTH: usize = 512;
+
+    // grain size needs to be much smaller than buffer length for it to wrap many times around in one callback
+    check!(get_grain(id).unwrap().get_grain_size_in_samples() * 4 < BUFFER_LENGTH);
+
+    // simulate audio callback
+    for _ in 0..BUFFER_LENGTH {
+        let sample = get_grain(id).unwrap().get_next_sample();
+        check!(sample <= 1.0, "Sample is greather than 1.0!");
+        check!(sample >= -1.0, "Sample is smaller than -1.0!");
+    }
+
+    flush_grains();
+}
 // const TEST_GRAIN_SIZE_IN_MS: f32 = 0.9;
 // const TEST_GRAIN_SIZE_IN_SAMPLES: f32 = (TEST_GRAIN_SIZE_IN_MS * FS as f32) / 1000.0;
 
