@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 micromath = { version = "2.0.0", optional = true }
 assert2 = "0.3.6"
+spin = { version = "0.9.4", default-features = false, features = ["mutex","spin_mutex"] }
+heapless = { version = "0.7.16", features = ["x86-sync-pool"] }
 
 [features]
 default = ["no_std"]

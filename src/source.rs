@@ -1,4 +1,4 @@
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Source {
     AudioFile,
     DelayLine,
@@ -6,28 +6,17 @@ pub enum Source {
 }
 
 impl Source {
-    fn get_file_sample(&self, position: usize, offset: usize) -> usize {
-        offset + position
-    }
-
-    pub fn get_source_sample(&self, position: usize, offset: usize) -> usize {
+    pub fn get_source_sample_f32(&self, source_stream: &[f32], position: f32) -> f32 {
         match self {
-            Source::AudioFile => self.get_file_sample(position, offset),
-            _ => offset,
-        }
-    }
-
-    pub fn get_source_sample_f32(&self, source_stream: &[f32], offset: f32) -> f32 {
-        match self {
-            Source::AudioFile => self.get_file_sample_f32_interpolated(source_stream, offset),
+            Source::AudioFile => self.get_file_sample_f32_interpolated(source_stream, position),
             _ => 0.0,
         }
     }
 
-    fn get_file_sample_f32_interpolated(&self, source_stream: &[f32], offset: f32) -> f32 {
-        let trunc_offset = offset as usize;
-        let first = source_stream[trunc_offset];
-        let next = source_stream[trunc_offset + 1];
+    fn get_file_sample_f32_interpolated(&self, source_stream: &[f32], position: f32) -> f32 {
+        let trunc_position = position as usize;
+        let first = source_stream[trunc_position];
+        let next = source_stream[trunc_position + 1];
 
         (first + next) * 0.5
     }
