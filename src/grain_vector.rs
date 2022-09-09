@@ -133,11 +133,5 @@ pub fn get_next_sample() -> f32 {
         sample += grains.get_mut(position).unwrap().get_next_sample();
     }
 
-    // ============
-    // TODO
-    // ============
-    //
-    // better mixing algorithm
-    sample / num_of_grains as f32
+    sample
 }
-
