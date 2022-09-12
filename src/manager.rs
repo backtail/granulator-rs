@@ -37,9 +37,11 @@ impl Granulator {
         }
     }
 
-    pub fn set_active_grains(&mut self, num_grains: usize) {
+    pub fn set_active_grains(&mut self, mut num_grains: usize) {
         if num_grains > MAX_GRAINS {
             num_grains = MAX_GRAINS;
         }
+
+        self.active_grains = num_grains;
     }
 }
