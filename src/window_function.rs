@@ -1,8 +1,6 @@
+use super::audio_tools::{PI, TWO_PI};
 use micromath::F32;
 
-use super::audio_tools::{PI, TWO_PI};
-
-#[derive(Clone, Copy, Debug)]
 pub enum WindowFunction {
     Trapezodial { slope: f32 },
     Gaussian { sigma: f32 },
