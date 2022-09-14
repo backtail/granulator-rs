@@ -1,5 +1,3 @@
-use super::grain::Grain;
-use super::grain_vector;
 use super::manager::MAX_GRAINS;
 
 use core::time::Duration;
@@ -7,7 +5,7 @@ use heapless::Vec;
 
 #[derive(Debug)]
 pub struct TimeInfo {
-    id: usize,
+    pub id: usize,
     start: Duration,
 }
 
@@ -20,7 +18,7 @@ impl TimeInfo {
 #[derive(Debug)]
 pub struct Scheduler {
     pub master_clock_counter: Duration,
-    future_vector: Vec<TimeInfo, MAX_GRAINS>,
+    pub future_vector: Vec<TimeInfo, MAX_GRAINS>,
 }
 
 impl Scheduler {
@@ -31,38 +29,20 @@ impl Scheduler {
         }
     }
 
-    pub fn update_clock(&mut self) {
+    pub fn update_clock(&mut self, increase: Duration) -> Vec<usize, MAX_GRAINS> {
         // increase counter by 1
-        self.master_clock_counter += Duration::from_millis(1);
+        self.master_clock_counter += increase;
 
-        // remove all finished grains
-        self.future_vector.retain(|future_grain| {
-            let real_grain = grain_vector::get_grain(future_grain.id);
-
-            let mut is_finished = false;
-
-            if real_grain.is_ok() {
-                is_finished = real_grain.unwrap().finished;
-                if is_finished {
-                    if grain_vector::remove_grain(future_grain.id).is_err() {
-                        panic!("Didn't remove the grain!")
-                    }
-                }
-            }
-
-            !is_finished
-        });
+        let mut return_vec = Vec::new();
 
         // check if grains crossed the start time
         for future_grain in &self.future_vector {
             if future_grain.start <= self.master_clock_counter {
-                self.activate_grain(future_grain.id).ok().unwrap();
+                return_vec.push(future_grain.id).unwrap();
             }
         }
-    }
 
-    pub fn activate_grain(&self, id: usize) -> Result<(), Grain> {
-        grain_vector::push_grain(id)
+        return_vec
     }
 
     pub fn schedule_grain(&mut self, id: usize, delay: Duration) -> Result<(), TimeInfo> {
