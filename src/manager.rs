@@ -102,7 +102,7 @@ impl Granulator {
     // ==============
 
     pub fn get_next_sample(&mut self) -> f32 {
-        let out_sample = 0_f32;
+        let mut out_sample = 0_f32;
 
         for grain in self.grains.get_mut_grains() {
             out_sample += grain.get_next_sample();
