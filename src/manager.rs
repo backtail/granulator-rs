@@ -18,7 +18,7 @@ pub const FS: usize = 48_000;
 pub struct Granulator {
     scheduler: Scheduler,
     grains: GrainsVector,
-    buffer_pointer: *const f32, // points to the beginning of the buffer
+    buffer_pointer: Option<*const f32>, // points to the beginning of the buffer
 
     // parameters
     master_volume: f32,
@@ -32,11 +32,11 @@ pub struct Granulator {
 }
 
 impl Granulator {
-    pub fn new(buffer_pointer: *const f32) -> Self {
+    pub fn new() -> Self {
         Granulator {
             scheduler: Scheduler::new(),
             grains: GrainsVector::new(),
-            buffer_pointer,
+            buffer_pointer: None,
 
             master_volume: 1.0 / MAX_GRAINS as f32,
             active_grains: 1,
@@ -153,12 +153,17 @@ impl Granulator {
     }
 
     fn activate_grain(&mut self, id: &usize) -> Result<(), usize> {
-        let offset = self.get_new_offset();
-        let size = self.get_new_grain_size();
+        if self.buffer_pointer.is_some() {
+            let offset = self.get_new_offset();
+            let size = self.get_new_grain_size();
 
-        let sub_slice =
-            unsafe { core::ptr::slice_from_raw_parts(self.buffer_pointer.add(offset), size) };
-        self.grains.push_grain(*id, sub_slice)
+            let offsetted_pointer = unsafe { self.buffer_pointer.unwrap().add(offset) };
+
+            let sub_slice = core::ptr::slice_from_raw_parts(offsetted_pointer, size);
+            self.grains.push_grain(*id, sub_slice)
+        } else {
+            Err(*id)
+        }
     }
 
     fn get_new_id(&mut self) -> usize {
