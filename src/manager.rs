@@ -8,6 +8,9 @@ use core::time::Duration;
 // grain vector
 use crate::grains_vector::GrainsVector;
 
+// audio processing
+use super::audio_tools::soft_clip;
+
 // global constants
 pub const MAX_GRAINS: usize = 64;
 pub const FS: usize = 48_000;
@@ -92,6 +95,20 @@ impl Granulator {
                 self.grain_size_in_samples = size_in_samples;
             }
         }
+    }
+
+    // ==============
+    // AUDIO CALLBACK
+    // ==============
+
+    pub fn get_next_sample(&mut self) -> f32 {
+        let out_sample = 0_f32;
+
+        for grain in self.grains.get_mut_grains() {
+            out_sample += grain.get_next_sample();
+        }
+
+        soft_clip(out_sample * self.master_volume)
     }
 
     // ====================
