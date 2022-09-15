@@ -6,7 +6,10 @@ use super::scheduler::Scheduler;
 use core::time::Duration;
 
 // grain vector
-use crate::grains_vector::GrainsVector;
+use crate::{
+    grains_vector::GrainsVector, pointer_wrapper::BufferSlice, source::Source,
+    window_function::WindowFunction,
+};
 
 // audio processing
 use super::audio_tools::soft_clip;
@@ -18,7 +21,7 @@ pub const FS: usize = 48_000;
 pub struct Granulator {
     scheduler: Scheduler,
     grains: GrainsVector,
-    buffer_pointer: Option<*const f32>, // points to the beginning of the buffer
+    audio_buffer: Option<BufferSlice>, // points to the beginning of the buffer
 
     // parameters
     master_volume: f32,
@@ -26,8 +29,7 @@ pub struct Granulator {
     offset: usize,
     grain_size_in_samples: usize,
 
-    sample_length: Option<usize>,
-
+    // misc
     current_id_counter: usize,
 }
 
@@ -36,14 +38,12 @@ impl Granulator {
         Granulator {
             scheduler: Scheduler::new(),
             grains: GrainsVector::new(),
-            buffer_pointer: None,
+            audio_buffer: None,
 
             master_volume: 1.0 / MAX_GRAINS as f32,
             active_grains: 1,
             offset: 0,
             grain_size_in_samples: 0,
-
-            sample_length: None,
 
             current_id_counter: 0,
         }
@@ -76,9 +76,10 @@ impl Granulator {
     }
 
     pub fn set_offset(&mut self, offset: usize) {
-        if self.sample_length.is_some() {
-            if offset >= self.sample_length.unwrap() {
-                self.offset = self.sample_length.unwrap();
+        if self.audio_buffer.is_some() {
+            let buffer_length = self.audio_buffer.as_ref().unwrap().length as usize;
+            if offset >= buffer_length {
+                self.offset = buffer_length;
             } else {
                 self.offset = offset;
             }
@@ -86,9 +87,9 @@ impl Granulator {
     }
 
     pub fn set_grain_size(&mut self, grain_size_in_ms: f32) {
-        if self.sample_length.is_some() {
+        if self.audio_buffer.is_some() {
             let size_in_samples = (FS as f32 / (grain_size_in_ms * 1000.0)) as usize;
-            let max_length = self.sample_length.unwrap() - self.offset;
+            let max_length = self.audio_buffer.as_ref().unwrap().length as usize - self.offset;
             if size_in_samples >= max_length {
                 self.grain_size_in_samples = max_length;
             } else {
@@ -102,13 +103,19 @@ impl Granulator {
     // ==============
 
     pub fn get_next_sample(&mut self) -> f32 {
-        let mut out_sample = 0_f32;
+        soft_clip(self.grains.get_next_sample() * self.master_volume)
+    }
 
-        for grain in self.grains.get_mut_grains() {
-            out_sample += grain.get_next_sample();
-        }
+    // ========================
+    // AUDIO BUFFER INTERACTION
+    // ========================
 
-        soft_clip(out_sample * self.master_volume)
+    pub fn set_audio_buffer(&mut self, buffer: &[f32]) {
+        // remove all references to old audio buffer
+        self.grains.flush();
+
+        // create slice buffer
+        self.audio_buffer = Some(BufferSlice::from_slice(buffer));
     }
 
     // ====================
@@ -147,20 +154,24 @@ impl Granulator {
     }
 
     fn activate_grains(&mut self, ids: &Vec<usize, MAX_GRAINS>) {
-        for id in ids {
-            self.activate_grain(id).unwrap();
+        if self.audio_buffer.is_some() {
+            for id in ids {
+                self.activate_grain(id).unwrap();
+            }
         }
     }
 
     fn activate_grain(&mut self, id: &usize) -> Result<(), usize> {
-        if self.buffer_pointer.is_some() {
-            let offset = self.get_new_offset();
-            let size = self.get_new_grain_size();
-
-            let offsetted_pointer = unsafe { self.buffer_pointer.unwrap().add(offset) };
-
-            let sub_slice = core::ptr::slice_from_raw_parts(offsetted_pointer, size);
-            self.grains.push_grain(*id, sub_slice)
+        if self.audio_buffer.is_some() {
+            self.grains.push_grain(
+                *id,
+                self.audio_buffer
+                    .as_ref()
+                    .unwrap()
+                    .get_sub_slice(self.get_new_offset(), self.get_new_grain_size()),
+                self.get_new_window(),
+                self.get_new_source(),
+            )
         } else {
             Err(*id)
         }
@@ -175,7 +186,7 @@ impl Granulator {
         self.current_id_counter
     }
 
-    // ==============================
+    // ==============================c
     // PARAMETER RUNTIME CALCULATIONS
     // ==============================
 
@@ -183,11 +194,19 @@ impl Granulator {
         self.offset
     }
 
-    fn get_new_grain_size(&self) -> usize {
-        self.grain_size_in_samples
+    fn get_new_grain_size(&self) -> f32 {
+        self.grain_size_in_samples as f32
     }
 
     fn get_new_delay(&self) -> Duration {
         core::time::Duration::ZERO
+    }
+
+    fn get_new_window(&self) -> WindowFunction {
+        WindowFunction::Sine
+    }
+
+    fn get_new_source(&self) -> Source {
+        Source::AudioFile
     }
 }
