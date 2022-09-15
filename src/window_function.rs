@@ -1,8 +1,11 @@
-use micromath::F32;
+#![allow(dead_code)]
 
 use super::audio_tools::{PI, TWO_PI};
+use micromath::F32;
 
-#[derive(Clone, Copy, Debug)]
+/// Currently only `Sine`, `Hann` and `Hamming` have implementations.
+///
+/// Other window functions will always output `0.0` as envelope amplitude!
 pub enum WindowFunction {
     Trapezodial { slope: f32 },
     Gaussian { sigma: f32 },

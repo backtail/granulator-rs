@@ -31,4 +31,4 @@ incremental = true
 overflow-checks = true
 
 [alias]
-t = "test -- --test-threads=1 --nocapture"
+t = "test --features=std t -- --nocapture"
