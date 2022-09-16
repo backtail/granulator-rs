@@ -49,6 +49,17 @@ impl Scheduler {
         self.future_vector
             .push(TimeInfo::new(id, self.master_clock_counter + delay))
     }
+
+    pub fn remove_grain(&mut self, id: usize) -> Result<(), usize> {
+        for (vector_id, grain) in self.future_vector.iter_mut().enumerate() {
+            if grain.id == id {
+                self.future_vector.remove(vector_id);
+                return Ok(());
+            }
+        }
+
+        Err(id)
+    }
 }
 
 #[cfg(test)]
@@ -76,5 +87,18 @@ mod tests {
 
         check!(!ids.is_empty());
         check!(ids[0] == 0);
+    }
+
+    #[test]
+    fn remove_a_grain() {
+        let mut s = Scheduler::new();
+
+        s.schedule_grain(0, Duration::ZERO).unwrap();
+
+        let ids = s.update_clock(Duration::from_millis(10));
+
+        check!(!s.future_vector.is_empty());
+        s.remove_grain(ids[0]).unwrap();
+        check!(s.future_vector.is_empty());
     }
 }
