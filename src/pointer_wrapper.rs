@@ -1,6 +1,7 @@
 /// Raw pointer that implements the `Send` trait since it's only acting on static memory
 ///
 /// Should always point at the beginning of your audio buffer in use
+#[derive(Debug)]
 pub struct BufferPointer(pub *const f32);
 unsafe impl Send for BufferPointer {}
 
@@ -11,6 +12,7 @@ impl BufferPointer {
 }
 
 /// Raw slice pointer that implements the `Send` trait since it's only acting on static memory
+#[derive(Debug)]
 pub struct BufferSlice {
     pub ptr: BufferPointer,
     pub length: f32,

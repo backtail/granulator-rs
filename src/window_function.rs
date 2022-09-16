@@ -6,6 +6,7 @@ use micromath::F32;
 /// Currently only `Sine`, `Hann` and `Hamming` have implementations.
 ///
 /// Other window functions will always output `0.0` as envelope amplitude!
+#[derive(Debug)]
 pub enum WindowFunction {
     Trapezodial { slope: f32 },
     Gaussian { sigma: f32 },

@@ -5,6 +5,8 @@ use super::grain::Grain;
 use super::manager::MAX_GRAINS;
 use super::pointer_wrapper::BufferSlice;
 use heapless::Vec;
+
+#[derive(Debug)]
 pub struct GrainsVector {
     grains: Vec<Grain, MAX_GRAINS>,
 }

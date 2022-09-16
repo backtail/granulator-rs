@@ -2,6 +2,7 @@ use super::pointer_wrapper::BufferSlice;
 use super::source::Source;
 use super::window_function::WindowFunction;
 
+#[derive(Debug)]
 pub struct Grain {
     // envelope variables
     pub window: WindowFunction,

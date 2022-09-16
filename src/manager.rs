@@ -18,6 +18,7 @@ use super::audio_tools::soft_clip;
 pub const MAX_GRAINS: usize = 64;
 pub const FS: usize = 48_000;
 
+#[derive(Debug)]
 pub struct Granulator {
     scheduler: Scheduler,
     grains: GrainsVector,
@@ -135,12 +136,12 @@ impl Granulator {
         }
 
         // remove all finished active grains
-        for id in &remove_ids {
-            self.grains.remove_grain(*id).unwrap();
+        for id in remove_ids {
+            self.grains.remove_grain(id).unwrap();
         }
 
         // after removing, the grains vector is the smallest and can potentially spawn/activate the most grains
-        self.activate_grains(&activate_these_ids);
+        self.activate_grains(activate_these_ids);
 
         // the difference between the current grain vector and number of active grains should be spawned
         let to_be_spawned = self.active_grains - self.grains.get_grains().len();
@@ -153,7 +154,7 @@ impl Granulator {
         }
     }
 
-    fn activate_grains(&mut self, ids: &Vec<usize, MAX_GRAINS>) {
+    fn activate_grains(&mut self, ids: Vec<usize, MAX_GRAINS>) {
         if self.audio_buffer.is_some() {
             for id in ids {
                 self.activate_grain(id).unwrap();
@@ -161,10 +162,10 @@ impl Granulator {
         }
     }
 
-    fn activate_grain(&mut self, id: &usize) -> Result<(), usize> {
+    fn activate_grain(&mut self, id: usize) -> Result<(), usize> {
         if self.audio_buffer.is_some() {
             self.grains.push_grain(
-                *id,
+                id,
                 self.audio_buffer
                     .as_ref()
                     .unwrap()
@@ -173,7 +174,7 @@ impl Granulator {
                 self.get_new_source(),
             )
         } else {
-            Err(*id)
+            Err(id)
         }
     }
 
