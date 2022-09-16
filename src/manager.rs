@@ -104,7 +104,11 @@ impl Granulator {
     // ==============
 
     pub fn get_next_sample(&mut self) -> f32 {
-        soft_clip(self.grains.get_next_sample() * self.master_volume)
+        if self.audio_buffer.is_some() {
+            soft_clip(self.grains.get_next_sample() * self.master_volume)
+        } else {
+            0.0
+        }
     }
 
     // ========================
