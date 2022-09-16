@@ -50,3 +50,31 @@ impl Scheduler {
             .push(TimeInfo::new(id, self.master_clock_counter + delay))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert2::*;
+
+    #[test]
+    fn schedule_a_grain() {
+        let mut s = Scheduler::new();
+
+        s.schedule_grain(0, Duration::ZERO).unwrap();
+
+        check!(!s.future_vector.is_empty());
+        check!(s.future_vector[0].id == 0);
+    }
+
+    #[test]
+    fn update_the_clock() {
+        let mut s = Scheduler::new();
+
+        s.schedule_grain(0, Duration::ZERO).unwrap();
+
+        let ids = s.update_clock(Duration::from_millis(10));
+
+        check!(!ids.is_empty());
+        check!(ids[0] == 0);
+    }
+}
