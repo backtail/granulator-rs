@@ -29,9 +29,9 @@ impl Scheduler {
         }
     }
 
-    pub fn update_clock(&mut self, increase: Duration) -> Vec<usize, MAX_GRAINS> {
-        // increase counter by 1
-        self.master_clock_counter += increase;
+    pub fn update_clock(&mut self, time_step: Duration) -> Vec<usize, MAX_GRAINS> {
+        // increase counter by timestep
+        self.master_clock_counter += time_step;
 
         let mut return_vec = Vec::new();
 
