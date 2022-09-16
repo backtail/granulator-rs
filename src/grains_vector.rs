@@ -69,26 +69,61 @@ impl GrainsVector {
 
 #[cfg(test)]
 mod tests {
-    use crate::pointer_wrapper::BufferPointer;
-
     use super::*;
     use assert2::*;
 
+    const SLICE: [f32; 10] = [0_f32; 10];
+
     #[test]
-    fn test_new_grains() {
+    fn push_and_remove_a_grain() {
         let mut g = GrainsVector::new();
 
-        let slice_p = BufferSlice {
-            ptr: BufferPointer(core::ptr::null()),
-            length: 1.0,
-        };
-
-        g.push_grain(0, slice_p, WindowFunction::Sine, Source::AudioFile)
-            .unwrap();
+        g.push_grain(
+            0,
+            BufferSlice::from_slice(&SLICE),
+            WindowFunction::Sine,
+            Source::AudioFile,
+        )
+        .unwrap();
 
         check!(g.grains.len() == 1);
 
         g.remove_grain(0).unwrap();
+
+        check!(g.grains.len() == 0);
+    }
+
+    #[test]
+    fn get_a_grain() {
+        let mut g = GrainsVector::new();
+
+        g.push_grain(
+            0,
+            BufferSlice::from_slice(&SLICE),
+            WindowFunction::Sine,
+            Source::AudioFile,
+        )
+        .unwrap();
+
+        check!(g.get_grains().len() == 1);
+        check!(g.get_mut_grains().len() == 1);
+    }
+
+    #[test]
+    fn flush_vector() {
+        let mut g = GrainsVector::new();
+
+        for i in 0..MAX_GRAINS {
+            g.push_grain(
+                i,
+                BufferSlice::from_slice(&SLICE),
+                WindowFunction::Sine,
+                Source::AudioFile,
+            )
+            .unwrap();
+        }
+
+        g.flush();
 
         check!(g.grains.len() == 0);
     }
