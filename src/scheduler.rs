@@ -7,11 +7,16 @@ use heapless::Vec;
 pub struct TimeInfo {
     pub id: usize,
     start: Duration,
+    has_started: bool,
 }
 
 impl TimeInfo {
     fn new(id: usize, start: Duration) -> Self {
-        TimeInfo { id, start }
+        TimeInfo {
+            id,
+            start,
+            has_started: false,
+        }
     }
 }
 
@@ -36,8 +41,9 @@ impl Scheduler {
         let mut return_vec = Vec::new();
 
         // check if grains crossed the start time
-        for future_grain in &self.future_vector {
-            if future_grain.start <= self.master_clock_counter {
+        for future_grain in &mut self.future_vector {
+            if future_grain.start <= self.master_clock_counter && !future_grain.has_started {
+                future_grain.has_started = true;
                 return_vec.push(future_grain.id).unwrap();
             }
         }
@@ -51,14 +57,20 @@ impl Scheduler {
     }
 
     pub fn remove_grain(&mut self, id: usize) -> Result<(), usize> {
+        let mut remove_id = None;
         for (vector_id, grain) in self.future_vector.iter_mut().enumerate() {
             if grain.id == id {
-                self.future_vector.remove(vector_id);
-                return Ok(());
+                remove_id = Some(vector_id);
+                break;
             }
         }
 
-        Err(id)
+        if remove_id.is_some() {
+            self.future_vector.remove(remove_id.unwrap());
+            return Ok(());
+        } else {
+            Err(id)
+        }
     }
 }
 
