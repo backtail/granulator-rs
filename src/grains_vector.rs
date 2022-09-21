@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::source::Source;
 use crate::window_function::WindowFunction;
 
