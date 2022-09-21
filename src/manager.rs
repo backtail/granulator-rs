@@ -44,7 +44,7 @@ impl Granulator {
             master_volume: 1.0 / MAX_GRAINS as f32,
             active_grains: 1,
             offset: 0,
-            grain_size_in_samples: 0,
+            grain_size_in_samples: 480,
 
             current_id_counter: 0,
         }
@@ -124,10 +124,16 @@ impl Granulator {
     // SCHEDULER MANAGEMENT
     // ====================
 
-    pub fn update_scheduler(&mut self, increase: Duration) {
-        // collect to be acticated grains when scheduler clock advances
-        let activate_these_ids = self.scheduler.update_clock(increase);
+    pub fn update_scheduler(&mut self, time_step: Duration) {
+        if self.audio_buffer.is_some() {
+            self.spawn_future_grains();
+            let ids = self.scheduler.update_clock(time_step);
+            self.activate_grains(&ids);
+            self.remove_finished_grains();
+        }
+    }
 
+    fn remove_finished_grains(&mut self) {
         // collect all finished grain ids
         let mut remove_ids: Vec<usize, MAX_GRAINS> = Vec::new();
         for grain in self.grains.get_mut_grains() {
@@ -138,54 +144,52 @@ impl Granulator {
 
         // remove all finished active grains
         for id in remove_ids {
+            self.scheduler.remove_grain(id).unwrap();
             self.grains.remove_grain(id).unwrap();
         }
+    }
 
-        // after removing, the grains vector is the smallest and can potentially spawn/activate the most grains
-        self.activate_grains(activate_these_ids);
+    fn activate_grains(&mut self, ids: &Vec<usize, MAX_GRAINS>) {
+        if self.audio_buffer.is_some() {
+            for id in ids {
+                self.grains
+                    .push_grain(
+                        *id,
+                        self.audio_buffer
+                            .as_ref()
+                            .unwrap()
+                            .get_sub_slice(self.get_new_offset(), self.get_new_grain_size()),
+                        self.get_new_window(),
+                        self.get_new_source(),
+                    )
+                    .unwrap();
+            }
+        }
+    }
 
-        // the difference between the current grain vector and number of active grains should be spawned
-        let to_be_spawned = self.active_grains - self.grains.get_grains().len();
+    fn spawn_future_grains(&mut self) {
+        // the difference between all future grains and number of active grains should be spawned, but never less than zero
+        let to_be_spawned = self
+            .active_grains
+            .checked_sub(self.scheduler.future_vector.len())
+            .unwrap_or(0);
 
         // spawn future grains
         for _ in 0..to_be_spawned {
             let id = self.get_new_id();
             let delay = self.get_new_delay();
-            self.scheduler.schedule_grain(id, delay).unwrap();
+            self.scheduler.schedule_grain(id, delay).ok();
         }
     }
 
-    fn activate_grains(&mut self, ids: Vec<usize, MAX_GRAINS>) {
-        if self.audio_buffer.is_some() {
-            for id in ids {
-                self.activate_grain(id).unwrap();
-            }
-        }
-    }
-
-    fn activate_grain(&mut self, id: usize) -> Result<(), usize> {
-        if self.audio_buffer.is_some() {
-            self.grains.push_grain(
-                id,
-                self.audio_buffer
-                    .as_ref()
-                    .unwrap()
-                    .get_sub_slice(self.get_new_offset(), self.get_new_grain_size()),
-                self.get_new_window(),
-                self.get_new_source(),
-            )
-        } else {
-            Err(id)
-        }
-    }
-
-    fn get_new_id(&mut self) -> usize {
+    pub fn get_new_id(&mut self) -> usize {
+        let current_id = self.current_id_counter;
         if self.current_id_counter >= usize::MAX - 1 {
             self.current_id_counter = 0;
         }
         self.current_id_counter += 1;
 
-        self.current_id_counter
+        current_id
     }
 
     // ==============================c
