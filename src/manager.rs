@@ -116,9 +116,6 @@ impl Granulator {
     // ========================
 
     pub fn set_audio_buffer(&mut self, buffer: &[f32]) {
-        // remove all references to old audio buffer
-        self.grains.flush();
-
         // create slice buffer
         self.audio_buffer = Some(BufferSlice::from_slice(buffer));
     }
