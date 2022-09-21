@@ -6,6 +6,7 @@ use std::time::Duration;
 const BUFFER_LENGTH: usize = 64;
 
 #[test]
+#[ignore]
 fn multi_threading() {
     // setup the variables
     let mut granulator = Granulator::new();
