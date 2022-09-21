@@ -212,3 +212,120 @@ impl Granulator {
         Source::AudioFile
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert2::*;
+
+    #[test]
+    fn get_a_new_index() {
+        let mut m = Granulator::new();
+        check!(m.current_id_counter == 0);
+
+        for i in 0..MAX_GRAINS {
+            let new_id = m.get_new_id();
+
+            check!(new_id == i);
+        }
+    }
+
+    #[test]
+    fn activate_all_grains() {
+        let mut m = Granulator::new();
+        let buffer = [0_f32; 100];
+        m.set_audio_buffer(&buffer);
+
+        let mut ids = Vec::new();
+
+        check!(m.grains.get_grains().len() == 0);
+
+        for _ in 0..MAX_GRAINS {
+            ids.push(m.get_new_id()).unwrap();
+        }
+
+        m.activate_grains(&ids);
+
+        check!(m.grains.get_grains().len() == MAX_GRAINS);
+    }
+
+    #[test]
+    fn spawn_all_grains() {
+        let mut m = Granulator::new();
+        let buffer = [0_f32; 100];
+        m.set_audio_buffer(&buffer);
+        m.set_active_grains(MAX_GRAINS);
+
+        m.spawn_future_grains();
+
+        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+    }
+
+    #[test]
+    fn remove_all_grains() {
+        // setup unit test
+        let mut m = Granulator::new();
+        let buffer = [1_f32; 10000];
+
+        let mut check_slice: Vec<usize, MAX_GRAINS> = Vec::new();
+        let mut zero_slice: Vec<usize, MAX_GRAINS> = Vec::new();
+        for i in 0..MAX_GRAINS {
+            check_slice.push(i).unwrap();
+            zero_slice.push(0).unwrap();
+        }
+
+        m.set_audio_buffer(&buffer);
+        m.set_active_grains(MAX_GRAINS);
+        m.set_grain_size(10.0);
+
+        // update scheduler
+        m.spawn_future_grains();
+        let ids = m.scheduler.update_clock(Duration::from_millis(20));
+
+        check!(ids == check_slice);
+
+        m.activate_grains(&ids);
+        m.remove_finished_grains();
+
+        check!(m.grains.get_grains().len() == MAX_GRAINS);
+        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+
+        // finish all grains
+        for _ in 0..481 {
+            m.get_next_sample();
+        }
+
+        // update schedular
+        m.spawn_future_grains();
+        let ids = m.scheduler.update_clock(Duration::from_millis(20));
+        check!(ids == Vec::<usize, MAX_GRAINS>::new());
+        m.activate_grains(&ids);
+        m.remove_finished_grains();
+
+        check!(m.grains.get_grains().len() == 0);
+        check!(m.scheduler.future_vector.len() == 0);
+
+        // next cycle
+
+        m.spawn_future_grains();
+        check!(m.grains.get_grains().len() == 0);
+        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+
+        let ids = m.scheduler.update_clock(Duration::from_millis(20));
+        m.activate_grains(&ids);
+        check!(m.grains.get_grains().len() == MAX_GRAINS);
+        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+    }
+
+    #[test]
+    fn set_grain_size() {
+        let mut m = Granulator::new();
+        let buffer = [0_f32; 10000];
+        m.set_audio_buffer(&buffer);
+
+        m.set_grain_size(100.0);
+        m.set_active_grains(1);
+
+        check!(m.grain_size_in_samples == 4800);
+    }
+}
