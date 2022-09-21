@@ -12,3 +12,4 @@ pub(crate) mod source;
 pub(crate) mod window_function;
 
 pub use crate::manager::Granulator;
+pub use crate::manager::MAX_GRAINS;
