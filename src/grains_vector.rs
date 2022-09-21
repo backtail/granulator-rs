@@ -24,10 +24,11 @@ impl GrainsVector {
         sub_slice: BufferSlice,
         window: WindowFunction,
         source: Source,
+        pitch: f32,
     ) -> Result<(), usize> {
         if self
             .grains
-            .push(Grain::new(id, sub_slice, window, source))
+            .push(Grain::new(id, sub_slice, window, source, pitch))
             .is_err()
         {
             Err(id)
@@ -85,6 +86,7 @@ mod tests {
             BufferSlice::from_slice(&SLICE),
             WindowFunction::Sine,
             Source::AudioFile,
+            1.0,
         )
         .unwrap();
 
@@ -104,6 +106,7 @@ mod tests {
             BufferSlice::from_slice(&SLICE),
             WindowFunction::Sine,
             Source::AudioFile,
+            1.0,
         )
         .unwrap();
 
@@ -121,6 +124,7 @@ mod tests {
                 BufferSlice::from_slice(&SLICE),
                 WindowFunction::Sine,
                 Source::AudioFile,
+                1.0,
             )
             .unwrap();
         }

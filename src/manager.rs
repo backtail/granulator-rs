@@ -29,6 +29,7 @@ pub struct Granulator {
     active_grains: usize,
     offset: usize,
     grain_size_in_samples: usize,
+    pitch: f32,
 
     // misc
     current_id_counter: usize,
@@ -45,6 +46,7 @@ impl Granulator {
             active_grains: 1,
             offset: 0,
             grain_size_in_samples: 480,
+            pitch: 1.0,
 
             current_id_counter: 0,
         }
@@ -95,6 +97,20 @@ impl Granulator {
                 self.grain_size_in_samples = max_length;
             } else {
                 self.grain_size_in_samples = size_in_samples;
+            }
+        }
+    }
+
+    pub fn set_pitch(&mut self, pitch: f32) {
+        if self.audio_buffer.is_some() {
+            if pitch <= 0.1 {
+                self.pitch = 0.1;
+            }
+            if pitch > 0.1 && pitch < 20.0 {
+                self.pitch = pitch;
+            }
+            if pitch >= 20.0 {
+                self.pitch = 20.0;
             }
         }
     }
@@ -161,6 +177,7 @@ impl Granulator {
                             .get_sub_slice(self.get_new_offset(), self.get_new_grain_size()),
                         self.get_new_window(),
                         self.get_new_source(),
+                        self.get_new_pitch(),
                     )
                     .unwrap();
             }
@@ -214,6 +231,10 @@ impl Granulator {
 
     fn get_new_source(&self) -> Source {
         Source::AudioFile
+    }
+
+    fn get_new_pitch(&self) -> f32 {
+        self.pitch
     }
 }
 
