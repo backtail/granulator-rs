@@ -30,6 +30,7 @@ impl Grain {
         source_sub_slice: BufferSlice,
         window: WindowFunction,
         source: Source,
+        pitch: f32,
     ) -> Self {
         Grain {
             window,
@@ -41,7 +42,7 @@ impl Grain {
             source_sub_slice,
             source_position: 0.0,
             source_value: 0.0,
-            pitch: 1.0,
+            pitch,
 
             finished: false,
 
