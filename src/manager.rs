@@ -89,7 +89,7 @@ impl Granulator {
 
     pub fn set_grain_size(&mut self, grain_size_in_ms: f32) {
         if self.audio_buffer.is_some() {
-            let size_in_samples = (FS as f32 / (grain_size_in_ms * 1000.0)) as usize;
+            let size_in_samples = ((FS as f32 / 1000.0) * grain_size_in_ms) as usize;
             let max_length = self.audio_buffer.as_ref().unwrap().length as usize - self.offset;
             if size_in_samples >= max_length {
                 self.grain_size_in_samples = max_length;
