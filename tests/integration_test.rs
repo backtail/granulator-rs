@@ -44,7 +44,7 @@ fn multi_threading() {
                     // lock
                     {
                         let mut audio = audio_ptr.lock().unwrap();
-                        let sample = audio.get_next_sample();
+                        let _sample = audio.get_next_sample();
                     }
                 }
                 sleep(audio_callback_duration);
