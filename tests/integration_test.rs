@@ -9,13 +9,13 @@ const BUFFER_LENGTH: usize = 64;
 #[ignore]
 fn multi_threading() {
     // setup the variables
-    let mut granulator = Granulator::new();
+    let fs = 48000.0;
+    let mut granulator = Granulator::new(fs as usize);
     let mut mock_audio_buffer = vec![];
     for _ in 0..10_000 {
         mock_audio_buffer.push(1.0);
     }
 
-    let fs = 48000.0;
     let audio_callback_interval = ((1_000_000.0 * BUFFER_LENGTH as f32) / fs) as u64; //ns
     let schedule_timer_interval = 20; //ms
 

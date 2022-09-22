@@ -16,7 +16,6 @@ use super::audio_tools::soft_clip;
 
 // global constants
 pub const MAX_GRAINS: usize = 64;
-pub const FS: usize = 48_000;
 
 #[derive(Debug)]
 pub struct Granulator {
@@ -33,10 +32,11 @@ pub struct Granulator {
 
     // misc
     current_id_counter: usize,
+    fs: usize,
 }
 
 impl Granulator {
-    pub fn new() -> Self {
+    pub fn new(fs: usize) -> Self {
         Granulator {
             scheduler: Scheduler::new(),
             grains: GrainsVector::new(),
@@ -49,6 +49,7 @@ impl Granulator {
             pitch: 1.0,
 
             current_id_counter: 0,
+            fs,
         }
     }
 
@@ -91,7 +92,7 @@ impl Granulator {
 
     pub fn set_grain_size(&mut self, grain_size_in_ms: f32) {
         if self.audio_buffer.is_some() {
-            let size_in_samples = ((FS as f32 / 1000.0) * grain_size_in_ms) as usize;
+            let size_in_samples = ((self.fs as f32 / 1000.0) * grain_size_in_ms) as usize;
             let max_length = self.audio_buffer.as_ref().unwrap().length as usize - self.offset;
             if size_in_samples >= max_length {
                 self.grain_size_in_samples = max_length;
@@ -112,6 +113,15 @@ impl Granulator {
             if pitch >= 20.0 {
                 self.pitch = 20.0;
             }
+        }
+    }
+
+    pub fn set_sample_rate(&mut self, fs: usize) -> Result<(), usize> {
+        if fs > 8_000 && fs < 192_000 {
+            self.fs = fs;
+            Ok(())
+        } else {
+            Err(fs)
         }
     }
 
@@ -243,9 +253,11 @@ mod tests {
     use super::*;
     use assert2::*;
 
+    const FS: usize = 48_000;
+
     #[test]
     fn get_a_new_index() {
-        let mut m = Granulator::new();
+        let mut m = Granulator::new(FS);
         check!(m.current_id_counter == 0);
 
         for i in 0..MAX_GRAINS {
@@ -257,7 +269,7 @@ mod tests {
 
     #[test]
     fn activate_all_grains() {
-        let mut m = Granulator::new();
+        let mut m = Granulator::new(FS);
         let buffer = [0_f32; 100];
         m.set_audio_buffer(&buffer);
 
@@ -276,7 +288,7 @@ mod tests {
 
     #[test]
     fn spawn_all_grains() {
-        let mut m = Granulator::new();
+        let mut m = Granulator::new(FS);
         let buffer = [0_f32; 100];
         m.set_audio_buffer(&buffer);
         m.set_active_grains(MAX_GRAINS);
@@ -289,7 +301,7 @@ mod tests {
     #[test]
     fn remove_all_grains() {
         // setup unit test
-        let mut m = Granulator::new();
+        let mut m = Granulator::new(FS);
         let buffer = [1_f32; 10000];
 
         let mut check_slice: Vec<usize, MAX_GRAINS> = Vec::new();
@@ -343,8 +355,8 @@ mod tests {
     }
 
     #[test]
-    fn set_grain_size() {
-        let mut m = Granulator::new();
+    fn set_a_grain_size() {
+        let mut m = Granulator::new(FS);
         let buffer = [0_f32; 10000];
         m.set_audio_buffer(&buffer);
 
@@ -352,5 +364,22 @@ mod tests {
         m.set_active_grains(1);
 
         check!(m.grain_size_in_samples == 4800);
+    }
+
+    #[test]
+    fn set_a_sample_rate() {
+        let mut m = Granulator::new(FS);
+
+        let result = m.set_sample_rate(1_000);
+        check!(m.fs == 48_000);
+        check!(result.is_err());
+
+        let result = m.set_sample_rate(300_000);
+        check!(m.fs == 48_000);
+        check!(result.is_err());
+
+        let result = m.set_sample_rate(44_100);
+        check!(m.fs == 44_100);
+        check!(result.is_ok());
     }
 }

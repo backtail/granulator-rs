@@ -24,7 +24,7 @@ use std::time::Duration;
 
 // only outputs sound if an audio buffer is provided
 // which can be swapped out during playback as well
-let granulator = granulator::Granulator::new();
+let granulator = granulator::Granulator::new(48_000); // provide a sample frequency
 
 // Wrap it in a reference counter and a Mutex, then clone it
 let audio_ref = Arc::new(Mutex::new(granulator));
@@ -82,7 +82,7 @@ mod app {
     fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
         // init system and buffer
         (
-            Shared { granulator: Granulator::new() },
+            Shared { granulator: Granulator::new(48_000) },
             Local { buffer },
             init::Monotonics(),
         )
