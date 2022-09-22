@@ -128,7 +128,7 @@ mod app {
 
 // configure as no_std as default since it is the default feature
 #![cfg_attr(feature = "no_std", no_std)]
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 
 pub(crate) mod manager;
 

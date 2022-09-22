@@ -14,9 +14,13 @@ use crate::{
 // audio processing
 use super::audio_tools::soft_clip;
 
-// global constants
+/// The most grains grains that can possibly play at the same time.
+///
+/// Increasing this will increase processing demands. Only changeable if one recompiles the
+/// crate with a different number. This will change in the future.
 pub const MAX_GRAINS: usize = 64;
 
+/// The brain of the granular synthesis algorithm.
 #[derive(Debug)]
 pub struct Granulator {
     scheduler: Scheduler,
@@ -36,6 +40,16 @@ pub struct Granulator {
 }
 
 impl Granulator {
+    /**
+    Constructs the Granulator object. A sample frequency is required, which can be changed
+    during playback if wanted.
+
+    ## Example
+
+    ```
+    let g = granulator::Granulator::new(48_000);
+    ```
+    */
     pub fn new(fs: usize) -> Self {
         Granulator {
             scheduler: Scheduler::new(),
@@ -57,6 +71,9 @@ impl Granulator {
     // SETTER WITH BOUND CHECKING
     // ==========================
 
+    /// Sets the internal master volume, which is dependend on `MAX_GRAINS`.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
     pub fn set_master_volume(&mut self, volume: f32) {
         if volume <= 0.0 {
             self.master_volume = 0.0;
@@ -71,6 +88,9 @@ impl Granulator {
         }
     }
 
+    /// Sets the currently active grains.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
     pub fn set_active_grains(&mut self, mut num_grains: usize) {
         if num_grains > MAX_GRAINS {
             num_grains = MAX_GRAINS;
@@ -79,6 +99,10 @@ impl Granulator {
         self.active_grains = num_grains;
     }
 
+    /// Sets the offset/playhead on the currently loaded buffer. Depending on other parameters,
+    /// every grain can have a different offset around this value.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
     pub fn set_offset(&mut self, offset: usize) {
         if self.audio_buffer.is_some() {
             let buffer_length = self.audio_buffer.as_ref().unwrap().length as usize;
@@ -90,6 +114,10 @@ impl Granulator {
         }
     }
 
+    /// Sets the main grain size. Depending on other parameters, every grain can have a different
+    /// size around this value.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
     pub fn set_grain_size(&mut self, grain_size_in_ms: f32) {
         if self.audio_buffer.is_some() {
             let size_in_samples = ((self.fs as f32 / 1000.0) * grain_size_in_ms) as usize;
@@ -102,6 +130,10 @@ impl Granulator {
         }
     }
 
+    /// Sets the current pitch. Depending on other parameters, every grain can have a different
+    /// pitch around this value.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
     pub fn set_pitch(&mut self, pitch: f32) {
         if self.audio_buffer.is_some() {
             if pitch <= 0.1 {
@@ -116,6 +148,8 @@ impl Granulator {
         }
     }
 
+    /// Sets the sample rate of the `Granulator` for calculations. This should be updated as soon
+    /// as your sound driver changes its sample rate!
     pub fn set_sample_rate(&mut self, fs: usize) -> Result<(), usize> {
         if fs > 8_000 && fs < 192_000 {
             self.fs = fs;
@@ -129,6 +163,32 @@ impl Granulator {
     // AUDIO CALLBACK
     // ==============
 
+    /**
+    Returns a cummulated sample value of all grains with master volume and soft clipping applied.
+
+    Use this in the audio callback.
+
+    ## Example
+
+    ```
+    // some audio callback function
+    fn audio_handler(buffer: &mut [f32; 64]) {
+
+        // should be wrapped in Arc<Mutex<_>> or is part of a critical section
+        // in the main entry point of the program
+        let mut g = granulator::Granulator::new(48_000);
+
+        // lock the granulator object since it has to live on two different threads/tasks
+        {
+            let mut g_locked = g; // get MutexGuard or apply the closure
+            for sample in 0..buffer.len() {
+                buffer[sample] = g_locked.get_next_sample();
+            }
+        }
+    }
+
+    ```
+    */
     pub fn get_next_sample(&mut self) -> f32 {
         if self.audio_buffer.is_some() {
             soft_clip(self.grains.get_next_sample() * self.master_volume)
@@ -141,6 +201,7 @@ impl Granulator {
     // AUDIO BUFFER INTERACTION
     // ========================
 
+    /// Sets a new audio buffer for the algorithm to work on.
     pub fn set_audio_buffer(&mut self, buffer: &[f32]) {
         // create slice buffer
         self.audio_buffer = Some(BufferSlice::from_slice(buffer));
@@ -150,6 +211,11 @@ impl Granulator {
     // SCHEDULER MANAGEMENT
     // ====================
 
+    /// Updates the internal scheduler which keeps track of which grain will be started/triggered
+    /// at which point in time. It also removes every grain, that has finished playing.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
+    /// Preferrably at the end.
     pub fn update_scheduler(&mut self, time_step: Duration) {
         if self.audio_buffer.is_some() {
             self.spawn_future_grains();
@@ -209,7 +275,7 @@ impl Granulator {
         }
     }
 
-    pub fn get_new_id(&mut self) -> usize {
+    fn get_new_id(&mut self) -> usize {
         let current_id = self.current_id_counter;
         if self.current_id_counter >= usize::MAX - 1 {
             self.current_id_counter = 0;
