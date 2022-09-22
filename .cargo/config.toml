@@ -1,7 +1,6 @@
 [profile.dev]
 opt-level = 3
 debug = true
-rpath = false
 lto = false
 debug-assertions = false
 codegen-units = 16
@@ -12,13 +11,13 @@ overflow-checks = false
 [profile.release]
 opt-level = 'z'
 debug = false
-rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-panic = 'unwind'
+panic = 'abort'
 incremental = false
 overflow-checks = false
+strip = "debuginfo"
 
 [profile.test]
 opt-level = 0
@@ -31,4 +30,5 @@ incremental = true
 overflow-checks = true
 
 [alias]
-t = "test --features=std t -- --nocapture"
+t = "test --features=std -- --nocapture"
+d = "doc --no-deps"
