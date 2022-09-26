@@ -17,7 +17,7 @@ codegen-units = 1
 panic = 'abort'
 incremental = false
 overflow-checks = false
-strip = "debuginfo"
+# strip = "debuginfo"
 
 [profile.test]
 opt-level = 0
