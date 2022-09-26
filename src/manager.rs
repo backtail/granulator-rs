@@ -18,7 +18,7 @@ use super::audio_tools::soft_clip;
 ///
 /// Increasing this will increase processing demands. Only changeable if one recompiles the
 /// crate with a different number. This will change in the future.
-pub const MAX_GRAINS: usize = 64;
+pub const MAX_GRAINS: usize = 50;
 
 /// The brain of the granular synthesis algorithm.
 #[derive(Debug)]
