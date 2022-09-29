@@ -15,7 +15,9 @@ pub struct Grain {
     pub source_sub_slice: BufferSlice, // slice as pointer
     pub source_position: f32,          // between 0..grain_length (in samples)
     pub source_value: f32,             // between 0..1
+
     pub pitch: f32,
+    pub velocity: f32,
 
     // grain variables
     pub finished: bool,
@@ -31,6 +33,7 @@ impl Grain {
         window: WindowFunction,
         source: Source,
         pitch: f32,
+        velocity: f32,
     ) -> Self {
         Grain {
             window,
@@ -42,7 +45,9 @@ impl Grain {
             source_sub_slice,
             source_position: 0.0,
             source_value: 0.0,
+
             pitch,
+            velocity,
 
             finished: false,
 
@@ -91,6 +96,6 @@ impl Grain {
     }
 
     pub fn get_next_sample(&mut self) -> f32 {
-        self.update_envelope() * self.update_source_sample()
+        self.update_envelope() * self.update_source_sample() * self.velocity
     }
 }

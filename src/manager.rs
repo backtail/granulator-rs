@@ -33,6 +33,7 @@ pub struct Granulator {
     offset: usize,
     grain_size_in_samples: usize,
     pitch: f32,
+    velocity: f32,
 
     // misc
     current_id_counter: usize,
@@ -61,6 +62,7 @@ impl Granulator {
             offset: 0,
             grain_size_in_samples: 480,
             pitch: 1.0,
+            velocity: 1.0,
 
             current_id_counter: 0,
             fs,
@@ -144,6 +146,24 @@ impl Granulator {
             }
             if pitch >= 20.0 {
                 self.pitch = 20.0;
+            }
+        }
+    }
+
+    /// Sets the current velocity. Depending on other parameters, every grain can have a different
+    /// velocity around this value.
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
+    pub fn set_veloctiy(&mut self, velocity: f32) {
+        if self.audio_buffer.is_some() {
+            if velocity <= 0.0 {
+                self.velocity = 0.0;
+            }
+            if velocity > 0.0 && velocity < 1.0 {
+                self.velocity = velocity;
+            }
+            if velocity >= 1.0 {
+                self.velocity = 1.0;
             }
         }
     }
@@ -254,6 +274,7 @@ impl Granulator {
                         self.get_new_window(),
                         self.get_new_source(),
                         self.get_new_pitch(),
+                        self.get_new_velocity(),
                     )
                     .unwrap();
             }
@@ -311,6 +332,10 @@ impl Granulator {
 
     fn get_new_pitch(&self) -> f32 {
         self.pitch
+    }
+
+    fn get_new_velocity(&self) -> f32 {
+        self.velocity
     }
 }
 
