@@ -1,15 +1,19 @@
 // data management
 use heapless::Vec;
 
+// statistics and randomness
+use tinyrand::{Rand, StdRand, Wyrand};
+
 // scheduler specific
 use super::scheduler::Scheduler;
 use core::time::Duration;
 
-// grain vector
-use crate::{
-    grains_vector::GrainsVector, pointer_wrapper::BufferSlice, source::Source,
-    window_function::WindowFunction,
-};
+// crate specific
+use crate::grains_vector::GrainsVector;
+use crate::manager::GranulatorParameter::*;
+use crate::pointer_wrapper::BufferSlice;
+use crate::source::Source;
+use crate::window_function::WindowFunction;
 
 // audio processing
 use super::audio_tools::soft_clip;
@@ -20,8 +24,15 @@ use super::audio_tools::soft_clip;
 /// crate with a different number. This will change in the future.
 pub const MAX_GRAINS: usize = 50;
 
+/// Smallest value at which the spreading algorithm should be activated
+///
+/// The ADC has a resolultion of 12 bit, so the smallest number that can be represented is
+/// 1/(2^12-1) = 0.00024420024. To give a little room for error, this value is being chosen
+/// to be ten times bigger.
+const SPREAD_ESPILON: f32 = 0.0024420024;
+
 /// The brain of the granular synthesis algorithm.
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Granulator {
     scheduler: Scheduler,
     grains: GrainsVector,
@@ -35,9 +46,41 @@ pub struct Granulator {
     pitch: f32,
     velocity: f32,
 
+    // parameter bounds
+    max_grain_size_in_ms: f32,
+
+    // spread parameters
+    sp_offset: f32,
+    sp_grain_size: f32,
+    sp_pitch: f32,
+    sp_velocity: f32,
+
+    // current random value
+    random_offset_value: usize,
+    random_grain_size_value: usize,
+    random_pitch_value: f32,
+    random_velocity_value: f32,
+
     // misc
     current_id_counter: usize,
     fs: usize,
+    rng: Wyrand,
+}
+
+/// Defines all configurable parameters
+pub enum GranulatorParameter {
+    MasterVolume,
+    ActiveGrains,
+
+    Offset,
+    GrainSize,
+    Pitch,
+    Velocity,
+
+    OffsetSpread,
+    GrainSizeSpread,
+    PitchSpread,
+    VelocitySpread,
 }
 
 impl Granulator {
@@ -64,8 +107,21 @@ impl Granulator {
             pitch: 1.0,
             velocity: 1.0,
 
+            max_grain_size_in_ms: 1000.0,
+
+            sp_offset: 0.0,
+            sp_grain_size: 0.0,
+            sp_pitch: 0.0,
+            sp_velocity: 0.0,
+
+            random_offset_value: 0,
+            random_grain_size_value: 480,
+            random_pitch_value: 1.0,
+            random_velocity_value: 1.0,
+
             current_id_counter: 0,
             fs,
+            rng: StdRand::default(),
         }
     }
 
@@ -179,6 +235,74 @@ impl Granulator {
         }
     }
 
+    /// Sets the maximum value the grain size parameter can reach. Is in between 100ms and the
+    /// length of the currently loaded sample. This value is in ms.
+    ///
+    /// May be updated frequently or just once in the beginning.
+    pub fn set_max_grain_size(&mut self, grain_size_in_ms: f32) {
+        if self.audio_buffer.is_some() {
+            let max_grain_size =
+                (self.audio_buffer.as_ref().unwrap().length / self.fs as f32) * 1000.0;
+            let min_grain_size = 100.0;
+
+            if grain_size_in_ms < min_grain_size {
+                self.max_grain_size_in_ms = min_grain_size;
+            }
+            if grain_size_in_ms > max_grain_size {
+                self.max_grain_size_in_ms = max_grain_size;
+            }
+            if grain_size_in_ms >= min_grain_size && grain_size_in_ms <= max_grain_size {
+                self.max_grain_size_in_ms = grain_size_in_ms;
+            }
+        }
+    }
+
+    /// Sets a `GranulatorParameter` with bound checking. If the given value is less than 0, it will
+    /// be kept at 0. If the the given value is more than 1, it will be kept at 1.
+    ///
+    ///
+    /// This should be updated in a dedicated update task/thread in regular intervals < 20ms.
+    pub fn set_parameter(&mut self, parameter: GranulatorParameter, value: f32) {
+        if self.audio_buffer.is_some() {
+            let mut parameter_value = value;
+            if value < 0.0 {
+                parameter_value = 0.0;
+            }
+            if value > 1.0 {
+                parameter_value = 1.0;
+            }
+
+            match parameter {
+                ActiveGrains => {
+                    self.active_grains = (parameter_value * MAX_GRAINS as f32) as usize;
+                }
+                Offset => {
+                    self.offset =
+                        (parameter_value * self.audio_buffer.as_ref().unwrap().length) as usize;
+                }
+                GrainSize => {
+                    let size_in_samples =
+                        ((self.fs as f32 / 1000.0) * parameter_value * self.max_grain_size_in_ms)
+                            as usize;
+                    let max_length =
+                        self.audio_buffer.as_ref().unwrap().length as usize - self.offset;
+                    if size_in_samples >= max_length {
+                        self.grain_size_in_samples = max_length;
+                    } else {
+                        self.grain_size_in_samples = size_in_samples;
+                    }
+                }
+                Pitch => self.pitch = (parameter_value * 19.9) + 0.1,
+                Velocity => self.velocity = parameter_value,
+                MasterVolume => self.master_volume = parameter_value * 5.0,
+                OffsetSpread => self.sp_offset = parameter_value,
+                GrainSizeSpread => self.sp_grain_size = parameter_value,
+                PitchSpread => self.sp_pitch = parameter_value,
+                VelocitySpread => self.sp_velocity = parameter_value,
+            }
+        }
+    }
+
     // ==============
     // AUDIO CALLBACK
     // ==============
@@ -264,6 +388,7 @@ impl Granulator {
     fn activate_grains(&mut self, ids: &Vec<usize, MAX_GRAINS>) {
         if self.audio_buffer.is_some() {
             for id in ids {
+                let velocity = self.get_new_velocity();
                 self.grains
                     .push_grain(
                         *id,
@@ -274,7 +399,7 @@ impl Granulator {
                         self.get_new_window(),
                         self.get_new_source(),
                         self.get_new_pitch(),
-                        self.get_new_velocity(),
+                        velocity,
                     )
                     .unwrap();
             }
@@ -334,8 +459,39 @@ impl Granulator {
         self.pitch
     }
 
-    fn get_new_velocity(&self) -> f32 {
-        self.velocity
+    fn get_new_velocity(&mut self) -> f32 {
+        // generate new random value
+        if self.sp_velocity >= SPREAD_ESPILON {
+            self.get_spreaded(Velocity);
+            let mut velocity = self.random_velocity_value;
+
+            if velocity < 0.0 {
+                velocity = 0.0;
+            }
+            if velocity > 1.0 {
+                velocity = 1.0;
+            }
+
+            velocity
+        } else {
+            self.velocity
+        }
+    }
+
+    fn get_spreaded(&mut self, parameter: GranulatorParameter) {
+        match parameter {
+            Offset | OffsetSpread => {}
+            GrainSize | GrainSizeSpread => {}
+            Pitch | VelocitySpread => {}
+            Velocity | VelocitySpread => {
+                let random_u32 = self.rng.next_u32();
+                let random_f32 = random_u32 as f32 / u32::MAX as f32;
+                let normalized_f32 = (random_f32 * 2.0) - 1.0;
+
+                self.random_velocity_value = self.velocity + normalized_f32;
+            }
+            _ => {}
+        }
     }
 }
 
