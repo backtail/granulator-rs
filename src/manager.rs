@@ -26,9 +26,9 @@ pub const MAX_GRAINS: usize = 50;
 
 /// Smallest value at which the spreading algorithm should be activated
 ///
-/// The ADC has a resolultion of 12 bit, so the smallest number that can be represented is
-/// 1/(2^12-1) = 0.00024420024. To give a little room for error, this value is being chosen
-/// to be ten times bigger.
+/// The ADC of the Electrosmith Daisy Seed (STM32h750) has a resolultion of 12 bit, so the 
+/// smallest number that can be represented is 1/(2^12-1) = 0.00024420024. To give a little 
+/// room for error, this value is being chosen to be ten times bigger.
 const SPREAD_ESPILON: f32 = 0.0024420024;
 
 /// The brain of the granular synthesis algorithm.
