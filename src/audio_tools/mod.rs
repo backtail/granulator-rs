@@ -10,7 +10,6 @@ pub fn soft_clip(sample: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert2::*;
     use heapless::Vec;
 
     #[test]
@@ -24,8 +23,8 @@ mod tests {
 
         for sample in sample_buffer {
             let processed = soft_clip(sample);
-            check!(processed <= (1.0 + f32::EPSILON));
-            check!(processed >= (-1.0 - f32::EPSILON));
+            assert!(processed <= (1.0 + f32::EPSILON));
+            assert!(processed >= (-1.0 - f32::EPSILON));
         }
     }
 }

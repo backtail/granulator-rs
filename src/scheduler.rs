@@ -40,7 +40,7 @@ impl Scheduler {
 
         let mut return_vec = Vec::new();
 
-        // check if grains crossed the start time
+        // assert if grains crossed the start time
         for future_grain in &mut self.future_vector {
             if future_grain.start <= self.master_clock_counter && !future_grain.has_started {
                 future_grain.has_started = true;
@@ -77,7 +77,6 @@ impl Scheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert2::*;
 
     #[test]
     fn schedule_a_grain() {
@@ -85,8 +84,8 @@ mod tests {
 
         s.schedule_grain(0, Duration::ZERO).unwrap();
 
-        check!(!s.future_vector.is_empty());
-        check!(s.future_vector[0].id == 0);
+        assert!(!s.future_vector.is_empty());
+        assert!(s.future_vector[0].id == 0);
     }
 
     #[test]
@@ -97,8 +96,8 @@ mod tests {
 
         let ids = s.update_clock(Duration::from_millis(10));
 
-        check!(!ids.is_empty());
-        check!(ids[0] == 0);
+        assert!(!ids.is_empty());
+        assert!(ids[0] == 0);
     }
 
     #[test]
@@ -109,8 +108,8 @@ mod tests {
 
         let ids = s.update_clock(Duration::from_millis(10));
 
-        check!(!s.future_vector.is_empty());
+        assert!(!s.future_vector.is_empty());
         s.remove_grain(ids[0]).unwrap();
-        check!(s.future_vector.is_empty());
+        assert!(s.future_vector.is_empty());
     }
 }

@@ -498,19 +498,18 @@ impl Granulator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert2::*;
 
     const FS: usize = 48_000;
 
     #[test]
     fn get_a_new_index() {
         let mut m = Granulator::new(FS);
-        check!(m.current_id_counter == 0);
+        assert!(m.current_id_counter == 0);
 
         for i in 0..MAX_GRAINS {
             let new_id = m.get_new_id();
 
-            check!(new_id == i);
+            assert!(new_id == i);
         }
     }
 
@@ -522,7 +521,7 @@ mod tests {
 
         let mut ids = Vec::new();
 
-        check!(m.grains.get_grains().len() == 0);
+        assert!(m.grains.get_grains().len() == 0);
 
         for _ in 0..MAX_GRAINS {
             ids.push(m.get_new_id()).unwrap();
@@ -530,7 +529,7 @@ mod tests {
 
         m.activate_grains(&ids);
 
-        check!(m.grains.get_grains().len() == MAX_GRAINS);
+        assert!(m.grains.get_grains().len() == MAX_GRAINS);
     }
 
     #[test]
@@ -542,7 +541,7 @@ mod tests {
 
         m.spawn_future_grains();
 
-        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
     }
 
     #[test]
@@ -566,13 +565,13 @@ mod tests {
         m.spawn_future_grains();
         let ids = m.scheduler.update_clock(Duration::from_millis(20));
 
-        check!(ids == check_slice);
+        assert!(ids == check_slice);
 
         m.activate_grains(&ids);
         m.remove_finished_grains();
 
-        check!(m.grains.get_grains().len() == MAX_GRAINS);
-        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+        assert!(m.grains.get_grains().len() == MAX_GRAINS);
+        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
 
         // finish all grains
         for _ in 0..481 {
@@ -582,23 +581,23 @@ mod tests {
         // update schedular
         m.spawn_future_grains();
         let ids = m.scheduler.update_clock(Duration::from_millis(20));
-        check!(ids == Vec::<usize, MAX_GRAINS>::new());
+        assert!(ids == Vec::<usize, MAX_GRAINS>::new());
         m.activate_grains(&ids);
         m.remove_finished_grains();
 
-        check!(m.grains.get_grains().len() == 0);
-        check!(m.scheduler.future_vector.len() == 0);
+        assert!(m.grains.get_grains().len() == 0);
+        assert!(m.scheduler.future_vector.len() == 0);
 
         // next cycle
 
         m.spawn_future_grains();
-        check!(m.grains.get_grains().len() == 0);
-        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+        assert!(m.grains.get_grains().len() == 0);
+        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
 
         let ids = m.scheduler.update_clock(Duration::from_millis(20));
         m.activate_grains(&ids);
-        check!(m.grains.get_grains().len() == MAX_GRAINS);
-        check!(m.scheduler.future_vector.len() == MAX_GRAINS);
+        assert!(m.grains.get_grains().len() == MAX_GRAINS);
+        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
     }
 
     #[test]
@@ -610,7 +609,7 @@ mod tests {
         m.set_grain_size(100.0);
         m.set_active_grains(1);
 
-        check!(m.grain_size_in_samples == 4800);
+        assert!(m.grain_size_in_samples == 4800);
     }
 
     #[test]
@@ -618,15 +617,15 @@ mod tests {
         let mut m = Granulator::new(FS);
 
         let result = m.set_sample_rate(1_000);
-        check!(m.fs == 48_000);
-        check!(result.is_err());
+        assert!(m.fs == 48_000);
+        assert!(result.is_err());
 
         let result = m.set_sample_rate(300_000);
-        check!(m.fs == 48_000);
-        check!(result.is_err());
+        assert!(m.fs == 48_000);
+        assert!(result.is_err());
 
         let result = m.set_sample_rate(44_100);
-        check!(m.fs == 44_100);
-        check!(result.is_ok());
+        assert!(m.fs == 44_100);
+        assert!(result.is_ok());
     }
 }

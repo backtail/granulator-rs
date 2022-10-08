@@ -26,7 +26,6 @@ impl Source {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert2::*;
     use heapless::Vec;
 
     #[test]
@@ -69,12 +68,6 @@ mod tests {
             }
         }
 
-        check!(
-            success,
-            "{} should be between {} and {}",
-            output,
-            mock_file_stream[offset],
-            mock_file_stream[offset + 1]
-        );
+        assert!(success);
     }
 }

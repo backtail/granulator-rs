@@ -74,7 +74,6 @@ impl GrainsVector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert2::*;
 
     const SLICE: [f32; 10] = [0_f32; 10];
 
@@ -92,11 +91,11 @@ mod tests {
         )
         .unwrap();
 
-        check!(g.grains.len() == 1);
+        assert!(g.grains.len() == 1);
 
         g.remove_grain(0).unwrap();
 
-        check!(g.grains.len() == 0);
+        assert!(g.grains.len() == 0);
     }
 
     #[test]
@@ -113,8 +112,8 @@ mod tests {
         )
         .unwrap();
 
-        check!(g.get_grains().len() == 1);
-        check!(g.get_mut_grains().len() == 1);
+        assert!(g.get_grains().len() == 1);
+        assert!(g.get_mut_grains().len() == 1);
     }
 
     #[test]
@@ -135,6 +134,6 @@ mod tests {
 
         g.flush();
 
-        check!(g.grains.len() == 0);
+        assert!(g.grains.len() == 0);
     }
 }
