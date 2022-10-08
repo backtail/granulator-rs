@@ -1,8 +1,8 @@
 // data management
 use heapless::Vec;
 
-// statistics and randomness
-use tinyrand::{Rand, StdRand, Wyrand};
+// randomness
+use oorandom::Rand32;
 
 // scheduler specific
 use super::scheduler::Scheduler;
@@ -13,6 +13,7 @@ use crate::grains_vector::GrainsVector;
 use crate::manager::GranulatorParameter::*;
 use crate::pointer_wrapper::BufferSlice;
 use crate::source::Source;
+use crate::statistics::*;
 use crate::window_function::WindowFunction;
 
 // audio processing
@@ -26,8 +27,8 @@ pub const MAX_GRAINS: usize = 50;
 
 /// Smallest value at which the spreading algorithm should be activated
 ///
-/// The ADC of the Electrosmith Daisy Seed (STM32h750) has a resolultion of 12 bit, so the 
-/// smallest number that can be represented is 1/(2^12-1) = 0.00024420024. To give a little 
+/// The ADC of the Electrosmith Daisy Seed (STM32h750) has a resolultion of 12 bit, so the
+/// smallest number that can be represented is 1/(2^12-1) = 0.00024420024. To give a little
 /// room for error, this value is being chosen to be ten times bigger.
 const SPREAD_ESPILON: f32 = 0.0024420024;
 
@@ -64,7 +65,9 @@ pub struct Granulator {
     // misc
     current_id_counter: usize,
     fs: usize,
-    rng: Wyrand,
+
+    // RNG
+    rng: Rand32,
 }
 
 /// Defines all configurable parameters
@@ -95,6 +98,12 @@ impl Granulator {
     ```
     */
     pub fn new(fs: usize) -> Self {
+        // The seed of the of the PRNG is being determined by the derefence of the `seed` argument.
+        // This results in a non-repeating sequence of random numbers every time the the program gets
+        // restarted. No need to generate a new random seed.
+        let random_seed = 0;
+        let random_memory_location = core::ptr::addr_of!(random_seed);
+
         Granulator {
             scheduler: Scheduler::new(),
             grains: GrainsVector::new(),
@@ -121,7 +130,8 @@ impl Granulator {
 
             current_id_counter: 0,
             fs,
-            rng: StdRand::default(),
+
+            rng: Rand32::new(random_memory_location as u64),
         }
     }
 
@@ -389,6 +399,7 @@ impl Granulator {
         if self.audio_buffer.is_some() {
             for id in ids {
                 let velocity = self.get_new_velocity();
+                let pitch = self.get_new_pitch();
                 self.grains
                     .push_grain(
                         *id,
@@ -398,7 +409,7 @@ impl Granulator {
                             .get_sub_slice(self.get_new_offset(), self.get_new_grain_size()),
                         self.get_new_window(),
                         self.get_new_source(),
-                        self.get_new_pitch(),
+                        pitch,
                         velocity,
                     )
                     .unwrap();
@@ -455,24 +466,38 @@ impl Granulator {
         Source::AudioFile
     }
 
-    fn get_new_pitch(&self) -> f32 {
-        self.pitch
+    fn get_new_pitch(&mut self) -> f32 {
+        if self.sp_pitch >= SPREAD_ESPILON {
+            self.get_spreaded(Pitch);
+            let mut random_pitch = self.random_pitch_value;
+
+            if random_pitch <= 0.1 {
+                random_pitch = 0.1;
+            }
+            if random_pitch >= 20.0 {
+                random_pitch = 20.0;
+            }
+
+            random_pitch
+        } else {
+            self.pitch
+        }
     }
 
     fn get_new_velocity(&mut self) -> f32 {
-        // generate new random value
+        // generate new random value is spread is bigger than 0
         if self.sp_velocity >= SPREAD_ESPILON {
             self.get_spreaded(Velocity);
-            let mut velocity = self.random_velocity_value;
+            let mut random_velocity = self.random_velocity_value;
 
-            if velocity < 0.0 {
-                velocity = 0.0;
+            if random_velocity < 0.0 {
+                random_velocity = 0.0;
             }
-            if velocity > 1.0 {
-                velocity = 1.0;
+            if random_velocity > 1.0 {
+                random_velocity = 1.0;
             }
 
-            velocity
+            random_velocity
         } else {
             self.velocity
         }
@@ -482,13 +507,13 @@ impl Granulator {
         match parameter {
             Offset | OffsetSpread => {}
             GrainSize | GrainSizeSpread => {}
-            Pitch | VelocitySpread => {}
-            Velocity | VelocitySpread => {
-                let random_u32 = self.rng.next_u32();
-                let random_f32 = random_u32 as f32 / u32::MAX as f32;
-                let normalized_f32 = (random_f32 * 2.0) - 1.0;
-
-                self.random_velocity_value = self.velocity + normalized_f32;
+            Pitch | VelocitySpread => {
+                self.random_pitch_value =
+                    self.pitch + self.sp_pitch * get_random_float(&mut self.rng);
+            }
+            Velocity => {
+                self.random_velocity_value =
+                    self.velocity + self.sp_velocity * get_random_float(&mut self.rng);
             }
             _ => {}
         }
