@@ -48,6 +48,7 @@ pub struct Granulator {
     offset: usize,
     grain_size_in_samples: usize,
     pitch: f32,
+    delay: Duration,
     velocity: f32,
 
     // parameter bounds
@@ -57,12 +58,14 @@ pub struct Granulator {
     sp_offset: f32,
     sp_grain_size: f32,
     sp_pitch: f32,
+    sp_delay: f32,
     sp_velocity: f32,
 
     // current random value
     random_offset_value: usize,
     random_grain_size_value: usize,
     random_pitch_value: f32,
+    random_delay_value: Duration,
     random_velocity_value: f32,
 
     // misc
@@ -81,12 +84,14 @@ pub enum GranulatorParameter {
     Offset,
     GrainSize,
     Pitch,
+    Delay,
     Velocity,
 
     OffsetSpread,
     GrainSizeSpread,
     PitchSpread,
     VelocitySpread,
+    DelaySpread,
 }
 
 impl Granulator {
@@ -117,6 +122,7 @@ impl Granulator {
             offset: 0,
             grain_size_in_samples: 480,
             pitch: 1.0,
+            delay: Duration::ZERO,
             velocity: 1.0,
 
             max_grain_size_in_ms: 1000.0,
@@ -124,11 +130,13 @@ impl Granulator {
             sp_offset: 0.0,
             sp_grain_size: 0.0,
             sp_pitch: 0.0,
+            sp_delay: 0.0,
             sp_velocity: 0.0,
 
             random_offset_value: 0,
             random_grain_size_value: 480,
             random_pitch_value: 1.0,
+            random_delay_value: Duration::ZERO,
             random_velocity_value: 1.0,
 
             current_id_counter: 0,
@@ -305,11 +313,13 @@ impl Granulator {
                     }
                 }
                 Pitch => self.pitch = 10.0.powf(parameter_value * 2.0 - 1.0),
+                Delay => self.delay = Duration::from_millis((parameter_value * 1000.0) as u64),
                 Velocity => self.velocity = parameter_value,
                 MasterVolume => self.master_volume = parameter_value,
                 OffsetSpread => self.sp_offset = parameter_value,
                 GrainSizeSpread => self.sp_grain_size = parameter_value,
                 PitchSpread => self.sp_pitch = parameter_value,
+                DelaySpread => self.sp_delay = parameter_value,
                 VelocitySpread => self.sp_velocity = parameter_value,
             }
         }
@@ -470,10 +480,6 @@ impl Granulator {
         self.grain_size_in_samples as f32
     }
 
-    fn get_new_delay(&self) -> Duration {
-        core::time::Duration::ZERO
-    }
-
     fn get_new_window(&self) -> WindowFunction {
         WindowFunction::Sine
     }
@@ -500,8 +506,17 @@ impl Granulator {
         }
     }
 
+    fn get_new_delay(&mut self) -> Duration {
+        if self.sp_delay >= SPREAD_ESPILON {
+            self.get_spreaded(Delay);
+
+            self.random_delay_value
+        } else {
+            self.delay
+        }
+    }
+
     fn get_new_velocity(&mut self) -> f32 {
-        // generate new random value is spread is bigger than 0
         if self.sp_velocity >= SPREAD_ESPILON {
             self.get_spreaded(Velocity);
             let mut random_velocity = self.random_velocity_value;
@@ -524,7 +539,7 @@ impl Granulator {
             Offset => {
                 let range = self.audio_buffer.as_ref().unwrap().length;
                 let random_offset =
-                    (self.sp_offset * get_random_float(&mut self.rng) * range) as isize;
+                    (self.sp_offset * get_random_bipolar_float(&mut self.rng) * range) as isize;
 
                 let signed_offset = self.offset as isize + random_offset;
                 self.random_offset_value = signed_offset.clamp(0, range as isize) as usize;
@@ -532,11 +547,17 @@ impl Granulator {
             GrainSize => {}
             Pitch => {
                 self.random_pitch_value =
-                    self.pitch + self.sp_pitch * get_random_float(&mut self.rng) * 5.0;
+                    self.pitch + self.sp_pitch * get_random_bipolar_float(&mut self.rng) * 5.0;
+            }
+            Delay => {
+                let random_duration_in_ms =
+                    self.sp_delay * get_random_unipolar_float(&mut self.rng) * 1000.0;
+                self.random_delay_value =
+                    self.delay + Duration::from_millis(random_duration_in_ms as u64);
             }
             Velocity => {
                 self.random_velocity_value =
-                    self.velocity + self.sp_velocity * get_random_float(&mut self.rng);
+                    self.velocity + self.sp_velocity * get_random_bipolar_float(&mut self.rng);
             }
             _ => {}
         }
