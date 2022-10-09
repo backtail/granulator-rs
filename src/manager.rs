@@ -4,6 +4,9 @@ use heapless::Vec;
 // randomness
 use oorandom::Rand32;
 
+// math
+use micromath::F32Ext;
+
 // scheduler specific
 use super::scheduler::Scheduler;
 use core::time::Duration;
@@ -33,7 +36,7 @@ pub const MAX_GRAINS: usize = 50;
 const SPREAD_ESPILON: f32 = 0.0024420024;
 
 /// The brain of the granular synthesis algorithm.
-// #[derive(Debug)]
+#[derive(Debug)]
 pub struct Granulator {
     scheduler: Scheduler,
     grains: GrainsVector,
@@ -291,9 +294,8 @@ impl Granulator {
                         (parameter_value * self.audio_buffer.as_ref().unwrap().length) as usize;
                 }
                 GrainSize => {
-                    let size_in_samples =
-                        ((self.fs as f32 / 1000.0) * parameter_value * self.max_grain_size_in_ms)
-                            as usize;
+                    // let size_in_ms = parameter_value * self.max_grain_size_in_ms;
+                    let size_in_samples = ((self.fs as f32 / 1000.0) * parameter_value) as usize;
                     let max_length =
                         self.audio_buffer.as_ref().unwrap().length as usize - self.offset;
                     if size_in_samples >= max_length {
@@ -302,9 +304,9 @@ impl Granulator {
                         self.grain_size_in_samples = size_in_samples;
                     }
                 }
-                Pitch => self.pitch = (parameter_value * 19.9) + 0.1,
+                Pitch => self.pitch = 10.0.powf(parameter_value * 2.0 - 1.0),
                 Velocity => self.velocity = parameter_value,
-                MasterVolume => self.master_volume = parameter_value * 5.0,
+                MasterVolume => self.master_volume = parameter_value,
                 OffsetSpread => self.sp_offset = parameter_value,
                 GrainSizeSpread => self.sp_grain_size = parameter_value,
                 PitchSpread => self.sp_pitch = parameter_value,
@@ -400,13 +402,14 @@ impl Granulator {
             for id in ids {
                 let velocity = self.get_new_velocity();
                 let pitch = self.get_new_pitch();
+                let offset = self.get_new_offset();
                 self.grains
                     .push_grain(
                         *id,
                         self.audio_buffer
                             .as_ref()
                             .unwrap()
-                            .get_sub_slice(self.get_new_offset(), self.get_new_grain_size()),
+                            .get_sub_slice(offset, self.get_new_grain_size()),
                         self.get_new_window(),
                         self.get_new_source(),
                         pitch,
@@ -446,8 +449,21 @@ impl Granulator {
     // PARAMETER RUNTIME CALCULATIONS
     // ==============================
 
-    fn get_new_offset(&self) -> usize {
-        self.offset
+    fn get_new_offset(&mut self) -> usize {
+        if self.sp_offset >= SPREAD_ESPILON {
+            self.get_spreaded(Offset);
+            let mut random_offset = self.random_offset_value;
+
+            let max_length = self.audio_buffer.as_ref().unwrap().length as usize - 1000;
+
+            if random_offset >= max_length {
+                random_offset = max_length;
+            }
+
+            random_offset
+        } else {
+            self.offset
+        }
     }
 
     fn get_new_grain_size(&self) -> f32 {
@@ -474,8 +490,8 @@ impl Granulator {
             if random_pitch <= 0.1 {
                 random_pitch = 0.1;
             }
-            if random_pitch >= 20.0 {
-                random_pitch = 20.0;
+            if random_pitch >= 10.0 {
+                random_pitch = 10.0;
             }
 
             random_pitch
@@ -505,11 +521,18 @@ impl Granulator {
 
     fn get_spreaded(&mut self, parameter: GranulatorParameter) {
         match parameter {
-            Offset | OffsetSpread => {}
-            GrainSize | GrainSizeSpread => {}
-            Pitch | VelocitySpread => {
+            Offset => {
+                let range = self.audio_buffer.as_ref().unwrap().length;
+                let random_offset =
+                    (self.sp_offset * get_random_float(&mut self.rng) * range) as isize;
+
+                let signed_offset = self.offset as isize + random_offset;
+                self.random_offset_value = signed_offset.clamp(0, range as isize) as usize;
+            }
+            GrainSize => {}
+            Pitch => {
                 self.random_pitch_value =
-                    self.pitch + self.sp_pitch * get_random_float(&mut self.rng);
+                    self.pitch + self.sp_pitch * get_random_float(&mut self.rng) * 5.0;
             }
             Velocity => {
                 self.random_velocity_value =
