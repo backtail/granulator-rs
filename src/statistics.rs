@@ -31,7 +31,7 @@ mod tests {
         let seed = 0;
         let address = core::ptr::addr_of!(seed);
         let mut rng = Rand32::new(address as u64);
-        let random = get_random_bipolar_float(&mut rng);
+        let random = get_random_unipolar_float(&mut rng);
         for _ in 0..1000 {
             assert!(random <= 1.0);
             assert!(random >= 0.0);
