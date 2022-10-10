@@ -53,7 +53,7 @@ let update = | interval_since_last: Duration | {
 };
 ```
 
-###### Embedded
+##### Embedded
 For all embedded platforms with CAS (Compare and Swap) instruction, this library may be
 used safely.
 It follows the same principles as the example above, only that instead of a Mutex,
