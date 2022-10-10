@@ -302,8 +302,8 @@ impl Granulator {
                         (parameter_value * self.audio_buffer.as_ref().unwrap().length) as usize;
                 }
                 GrainSize => {
-                    // let size_in_ms = parameter_value * self.max_grain_size_in_ms;
-                    let size_in_samples = ((self.fs as f32 / 1000.0) * parameter_value) as usize;
+                    let size_in_ms = parameter_value * 1000.0;
+                    let size_in_samples = ((self.fs as f32 / 1000.0) * size_in_ms) as usize;
                     let max_length =
                         self.audio_buffer.as_ref().unwrap().length as usize - self.offset;
                     if size_in_samples >= max_length {
@@ -413,13 +413,14 @@ impl Granulator {
                 let velocity = self.get_new_velocity();
                 let pitch = self.get_new_pitch();
                 let offset = self.get_new_offset();
+                let grain_size = self.get_new_grain_size();
                 self.grains
                     .push_grain(
                         *id,
                         self.audio_buffer
                             .as_ref()
                             .unwrap()
-                            .get_sub_slice(offset, self.get_new_grain_size()),
+                            .get_sub_slice(offset, grain_size),
                         self.get_new_window(),
                         self.get_new_source(),
                         pitch,
@@ -476,8 +477,14 @@ impl Granulator {
         }
     }
 
-    fn get_new_grain_size(&self) -> f32 {
-        self.grain_size_in_samples as f32
+    fn get_new_grain_size(&mut self) -> f32 {
+        if self.sp_grain_size >= SPREAD_ESPILON {
+            self.get_spreaded(GrainSize);
+
+            self.random_grain_size_value as f32
+        } else {
+            self.grain_size_in_samples as f32
+        }
     }
 
     fn get_new_window(&self) -> WindowFunction {
@@ -544,7 +551,13 @@ impl Granulator {
                 let signed_offset = self.offset as isize + random_offset;
                 self.random_offset_value = signed_offset.clamp(0, range as isize) as usize;
             }
-            GrainSize => {}
+            GrainSize => {
+                let range = self.audio_buffer.as_ref().unwrap().length;
+                let random_grain_size =
+                    (self.sp_grain_size * get_random_bipolar_float(&mut self.rng) * range) as isize;
+                let signed_grain_size = self.grain_size_in_samples as isize + random_grain_size;
+                self.random_grain_size_value = signed_grain_size.clamp(0, range as isize) as usize;
+            }
             Pitch => {
                 self.random_pitch_value =
                     self.pitch + self.sp_pitch * get_random_bipolar_float(&mut self.rng) * 5.0;
