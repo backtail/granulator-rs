@@ -542,6 +542,11 @@ impl Granulator {
         self.audio_buffer = Some(BufferSlice::from_slice(buffer));
     }
 
+    /// Removes current audio buffer and stops the algorithm
+    pub fn remove_audio_buffer(&mut self) {
+        self.audio_buffer = None;
+    }
+
     // ====================
     // SCHEDULER MANAGEMENT
     // ====================
