@@ -139,8 +139,13 @@ pub(crate) mod pointer_wrapper;
 pub(crate) mod scheduler;
 pub(crate) mod source;
 pub(crate) mod statistics;
+pub(crate) mod user_settings;
 pub(crate) mod window_function;
 
+// Granular specific
 pub use crate::manager::Granulator;
-pub use crate::manager::GranulatorParameter;
 pub use crate::manager::MAX_GRAINS;
+
+// User specific
+pub use crate::user_settings::GranulatorParameter;
+pub use crate::user_settings::N_USER_SETTINGS;
