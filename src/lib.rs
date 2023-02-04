@@ -149,3 +149,6 @@ pub use crate::manager::MAX_GRAINS;
 // User specific
 pub use crate::user_settings::GranulatorParameter;
 pub use crate::user_settings::N_USER_SETTINGS;
+
+// Audio callback
+pub use crate::manager::get_next_sample;

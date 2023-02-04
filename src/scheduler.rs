@@ -27,7 +27,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn new() -> Scheduler {
+    pub const fn new() -> Scheduler {
         Scheduler {
             master_clock_counter: Duration::ZERO,
             future_vector: Vec::new(),

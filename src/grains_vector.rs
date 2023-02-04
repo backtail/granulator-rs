@@ -8,13 +8,15 @@ use super::manager::MAX_GRAINS;
 use super::pointer_wrapper::BufferSlice;
 use heapless::Vec;
 
+pub static mut GRAINS: GrainsVector = GrainsVector::new();
+
 #[derive(Debug)]
 pub struct GrainsVector {
     grains: Vec<Grain, MAX_GRAINS>,
 }
 
 impl GrainsVector {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         GrainsVector { grains: Vec::new() }
     }
 

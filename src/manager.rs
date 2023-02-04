@@ -12,7 +12,7 @@ use super::scheduler::Scheduler;
 use core::time::Duration;
 
 // crate specific
-use crate::grains_vector::GrainsVector;
+use crate::grains_vector::GRAINS;
 use crate::pointer_wrapper::BufferSlice;
 use crate::source::Source;
 use crate::statistics::*;
@@ -41,11 +41,33 @@ const MAX_DELAY_IN_MS: f32 = 3000.0;
 const MAX_PITCH_RANGE: f32 = 2.0;
 const MASTER_VOLUME_RANGE: f32 = 5.0;
 
+pub static mut BUFFER_IS_LOADED: bool = false;
+
+fn is_buffer_loaded() -> bool {
+    unsafe { BUFFER_IS_LOADED }
+}
+
+// ==============
+// AUDIO CALLBACK
+// ==============
+
+pub fn get_next_sample() -> f32 {
+    if is_buffer_loaded() {
+        unsafe {
+            soft_clip(
+                GRAINS.get_next_sample() * MasterVolume.get_unit_float() * MASTER_VOLUME_RANGE,
+            )
+        }
+    } else {
+        0.0
+    }
+}
+
 /// The brain of the granular synthesis algorithm.
 #[derive(Debug)]
 pub struct Granulator {
     scheduler: Scheduler,
-    grains: GrainsVector,
+    // grains: &mut GrainsVector,
     audio_buffer: Option<BufferSlice>, // points to the beginning of the buffer
     buffer_length: Option<f32>,
 
@@ -80,7 +102,7 @@ impl Granulator {
 
         Granulator {
             scheduler: Scheduler::new(),
-            grains: GrainsVector::new(),
+            // grains: GrainsVector::new(),
             audio_buffer: None,
             buffer_length: None,
 
@@ -129,46 +151,6 @@ impl Granulator {
         }
     }
 
-    // ==============
-    // AUDIO CALLBACK
-    // ==============
-
-    /**
-    Returns a cummulated sample value of all grains with master volume and soft clipping applied.
-
-    Use this in the audio callback.
-
-    ## Example
-
-    ```
-    // some audio callback function
-    fn audio_handler(buffer: &mut [f32; 64]) {
-
-        // should be wrapped in Arc<Mutex<_>> or is part of a critical section
-        // in the main entry point of the program
-        let mut g = granulator::Granulator::new(48_000);
-
-        // lock the granulator object since it has to live on two different threads/tasks
-        {
-            let mut g_locked = g; // get MutexGuard or apply the closure
-            for sample in 0..buffer.len() {
-                buffer[sample] = g_locked.get_next_sample();
-            }
-        }
-    }
-
-    ```
-    */
-    pub fn get_next_sample(&mut self) -> f32 {
-        if self.audio_buffer.is_some() {
-            soft_clip(
-                self.grains.get_next_sample() * MasterVolume.get_unit_float() * MASTER_VOLUME_RANGE,
-            )
-        } else {
-            0.0
-        }
-    }
-
     // ========================
     // AUDIO BUFFER INTERACTION
     // ========================
@@ -178,12 +160,18 @@ impl Granulator {
         // create slice buffer
         self.audio_buffer = Some(BufferSlice::from_slice(buffer));
         self.buffer_length = Some(self.audio_buffer.as_ref().unwrap().length);
+        unsafe {
+            BUFFER_IS_LOADED = true;
+        }
     }
 
     /// Removes current audio buffer and stops the algorithm
     pub fn remove_audio_buffer(&mut self) {
         self.audio_buffer = None;
         self.buffer_length = None;
+        unsafe {
+            BUFFER_IS_LOADED = false;
+        }
     }
 
     // ====================
@@ -207,16 +195,20 @@ impl Granulator {
     fn remove_finished_grains(&mut self) {
         // collect all finished grain ids
         let mut remove_ids: Vec<usize, MAX_GRAINS> = Vec::new();
-        for grain in self.grains.get_mut_grains() {
-            if grain.finished {
-                remove_ids.push(grain.id).unwrap();
+        unsafe {
+            for grain in GRAINS.get_mut_grains() {
+                if grain.finished {
+                    remove_ids.push(grain.id).unwrap();
+                }
             }
         }
 
         // remove all finished active grains
         for id in remove_ids {
             self.scheduler.remove_grain(id).unwrap();
-            self.grains.remove_grain(id).unwrap();
+            unsafe {
+                GRAINS.remove_grain(id).unwrap();
+            }
         }
     }
 
@@ -227,19 +219,21 @@ impl Granulator {
                 let pitch = self.get_new_pitch();
                 let offset = self.get_new_offset();
                 let grain_size = self.get_new_grain_size();
-                self.grains
-                    .push_grain(
-                        *id,
-                        self.audio_buffer
-                            .as_ref()
-                            .unwrap()
-                            .get_sub_slice(offset, grain_size),
-                        self.get_new_window(),
-                        self.get_new_source(),
-                        pitch,
-                        velocity,
-                    )
-                    .unwrap();
+                unsafe {
+                    GRAINS
+                        .push_grain(
+                            *id,
+                            self.audio_buffer
+                                .as_ref()
+                                .unwrap()
+                                .get_sub_slice(offset, grain_size),
+                            self.get_new_window(),
+                            self.get_new_source(),
+                            pitch,
+                            velocity,
+                        )
+                        .unwrap();
+                }
             }
         }
     }
