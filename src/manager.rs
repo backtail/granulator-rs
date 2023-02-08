@@ -35,7 +35,7 @@ pub const MAX_GRAINS: usize = 50;
 /// room for error, this value is being chosen to be ten times bigger.
 const SPREAD_ESPILON: f32 = 0.0024420024;
 
-const MIN_GRAIN_SIZE_IN_SAMPLES: f32 = 400.0;
+const MIN_GRAIN_SIZE_IN_SAMPLES: f32 = 480.0;
 const MAX_GRAIN_SIZE_IN_MS: f32 = 2000.0;
 const MAX_DELAY_IN_MS: f32 = 3000.0;
 const MAX_PITCH_RANGE: f32 = 2.0;
@@ -426,6 +426,7 @@ fn ms_to_samples(fs: f32, value_in_ms: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::user_settings::GranulatorParameter::{ActiveGrains, GrainSize};
 
     const FS: usize = 48_000;
 
@@ -443,101 +444,110 @@ mod tests {
 
     #[test]
     fn activate_all_grains() {
-        let mut m = Granulator::new(FS);
-        let buffer = [0_f32; 100];
-        m.set_audio_buffer(&buffer);
+        unsafe {
+            let mut m = Granulator::new(FS);
+            let buffer = [0_f32; MIN_GRAIN_SIZE_IN_SAMPLES as usize];
+            GRAINS.flush();
 
-        let mut ids = Vec::new();
+            m.set_audio_buffer(&buffer);
 
-        assert!(m.grains.get_grains().len() == 0);
+            let mut ids = Vec::new();
 
-        for _ in 0..MAX_GRAINS {
-            ids.push(m.get_new_id()).unwrap();
+            assert!(GRAINS.get_grains().len() == 0);
+
+            for _ in 0..MAX_GRAINS {
+                ids.push(m.get_new_id()).unwrap();
+            }
+
+            m.activate_grains(&ids);
+
+            assert!(GRAINS.get_grains().len() == MAX_GRAINS);
         }
-
-        m.activate_grains(&ids);
-
-        assert!(m.grains.get_grains().len() == MAX_GRAINS);
     }
 
     #[test]
     fn spawn_all_grains() {
         let mut m = Granulator::new(FS);
-        let buffer = [0_f32; 100];
+        let buffer = [0_f32; MIN_GRAIN_SIZE_IN_SAMPLES as usize];
         m.set_audio_buffer(&buffer);
-        m.set_active_grains(MAX_GRAINS);
+        ActiveGrains.update(1.0);
 
         m.spawn_future_grains();
 
         assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
+        ActiveGrains.update(0.0);
     }
 
     #[test]
     fn remove_all_grains() {
-        // setup unit test
-        let mut m = Granulator::new(FS);
-        let buffer = [1_f32; 10000];
+        unsafe {
+            // setup unit test
+            let mut m = Granulator::new(FS);
+            let buffer = [1_f32; 10000];
+            GRAINS.flush();
 
-        let mut check_slice: Vec<usize, MAX_GRAINS> = Vec::new();
-        let mut zero_slice: Vec<usize, MAX_GRAINS> = Vec::new();
-        for i in 0..MAX_GRAINS {
-            check_slice.push(i).unwrap();
-            zero_slice.push(0).unwrap();
+            let mut check_slice: Vec<usize, MAX_GRAINS> = Vec::new();
+            let mut zero_slice: Vec<usize, MAX_GRAINS> = Vec::new();
+            for i in 0..MAX_GRAINS {
+                check_slice.push(i).unwrap();
+                zero_slice.push(0).unwrap();
+            }
+
+            m.set_audio_buffer(&buffer);
+            ActiveGrains.update(1.0);
+            GrainSize.update(0.0);
+
+            // update scheduler
+            m.spawn_future_grains();
+            let ids = m.scheduler.update_clock(Duration::from_millis(20));
+
+            assert!(ids == check_slice);
+
+            m.activate_grains(&ids);
+            m.remove_finished_grains();
+
+            assert!(GRAINS.get_grains().len() == MAX_GRAINS);
+            assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
+
+            // finish all grains
+            for _ in 0..MIN_GRAIN_SIZE_IN_SAMPLES as usize + 1 {
+                GRAINS.get_next_sample();
+            }
+
+            // update schedular
+            m.spawn_future_grains();
+            let ids = m.scheduler.update_clock(Duration::from_millis(20));
+            assert!(ids == Vec::<usize, MAX_GRAINS>::new());
+            m.activate_grains(&ids);
+            m.remove_finished_grains();
+
+            assert!(GRAINS.get_grains().len() == 0);
+            assert!(m.scheduler.future_vector.len() == 0);
+
+            // next cycle
+
+            m.spawn_future_grains();
+            assert!(GRAINS.get_grains().len() == 0);
+            assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
+
+            let ids = m.scheduler.update_clock(Duration::from_millis(20));
+            m.activate_grains(&ids);
+            assert!(GRAINS.get_grains().len() == MAX_GRAINS);
+            assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
         }
-
-        m.set_audio_buffer(&buffer);
-        m.set_active_grains(MAX_GRAINS);
-        m.set_grain_size(10.0);
-
-        // update scheduler
-        m.spawn_future_grains();
-        let ids = m.scheduler.update_clock(Duration::from_millis(20));
-
-        assert!(ids == check_slice);
-
-        m.activate_grains(&ids);
-        m.remove_finished_grains();
-
-        assert!(m.grains.get_grains().len() == MAX_GRAINS);
-        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
-
-        // finish all grains
-        for _ in 0..481 {
-            m.get_next_sample();
-        }
-
-        // update schedular
-        m.spawn_future_grains();
-        let ids = m.scheduler.update_clock(Duration::from_millis(20));
-        assert!(ids == Vec::<usize, MAX_GRAINS>::new());
-        m.activate_grains(&ids);
-        m.remove_finished_grains();
-
-        assert!(m.grains.get_grains().len() == 0);
-        assert!(m.scheduler.future_vector.len() == 0);
-
-        // next cycle
-
-        m.spawn_future_grains();
-        assert!(m.grains.get_grains().len() == 0);
-        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
-
-        let ids = m.scheduler.update_clock(Duration::from_millis(20));
-        m.activate_grains(&ids);
-        assert!(m.grains.get_grains().len() == MAX_GRAINS);
-        assert!(m.scheduler.future_vector.len() == MAX_GRAINS);
     }
 
     #[test]
     fn set_a_grain_size() {
         let mut m = Granulator::new(FS);
-        let buffer = [0_f32; 10000];
+        let buffer = [0_f32; (FS as usize / 1000) * MAX_GRAIN_SIZE_IN_MS as usize];
         m.set_audio_buffer(&buffer);
 
-        m.set_grain_size(100.0);
-        m.set_active_grains(1);
+        GrainSize.update(0.0);
+        assert!(m.get_grain_size_in_samples() == MIN_GRAIN_SIZE_IN_SAMPLES);
 
-        assert!(m.grain_size_in_samples == 4800);
+        GrainSize.update(1.0);
+        assert!(m.get_grain_size_in_samples() == ms_to_samples(FS as f32, MAX_GRAIN_SIZE_IN_MS));
     }
 
     #[test]

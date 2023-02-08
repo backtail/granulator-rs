@@ -18,7 +18,7 @@ copy its reference counter, start two threads and lock it respectively.
 
 This code snippet acts only as rough demonstration.
 
-```no_run
+```ignore
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 

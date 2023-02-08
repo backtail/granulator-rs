@@ -81,61 +81,68 @@ mod tests {
 
     #[test]
     fn push_and_remove_a_grain() {
-        let mut g = GrainsVector::new();
+        unsafe {
+            GRAINS
+                .push_grain(
+                    0,
+                    BufferSlice::from_slice(&SLICE),
+                    WindowFunction::Sine,
+                    Source::AudioFile,
+                    1.0,
+                    1.0,
+                )
+                .unwrap();
 
-        g.push_grain(
-            0,
-            BufferSlice::from_slice(&SLICE),
-            WindowFunction::Sine,
-            Source::AudioFile,
-            1.0,
-            1.0,
-        )
-        .unwrap();
+            assert!(GRAINS.grains.len() == 1);
 
-        assert!(g.grains.len() == 1);
+            GRAINS.remove_grain(0).unwrap();
 
-        g.remove_grain(0).unwrap();
-
-        assert!(g.grains.len() == 0);
+            assert!(GRAINS.grains.len() == 0);
+        }
     }
 
     #[test]
     fn get_a_grain() {
-        let mut g = GrainsVector::new();
+        unsafe {
+            GRAINS
+                .push_grain(
+                    0,
+                    BufferSlice::from_slice(&SLICE),
+                    WindowFunction::Sine,
+                    Source::AudioFile,
+                    1.0,
+                    1.0,
+                )
+                .unwrap();
 
-        g.push_grain(
-            0,
-            BufferSlice::from_slice(&SLICE),
-            WindowFunction::Sine,
-            Source::AudioFile,
-            1.0,
-            1.0,
-        )
-        .unwrap();
+            assert!(GRAINS.get_grains().len() == 1);
+            assert!(GRAINS.get_mut_grains().len() == 1);
 
-        assert!(g.get_grains().len() == 1);
-        assert!(g.get_mut_grains().len() == 1);
+            GRAINS.flush();
+        }
     }
 
     #[test]
     fn flush_vector() {
-        let mut g = GrainsVector::new();
+        unsafe {
+            for i in 0..MAX_GRAINS {
+                GRAINS
+                    .push_grain(
+                        i,
+                        BufferSlice::from_slice(&SLICE),
+                        WindowFunction::Sine,
+                        Source::AudioFile,
+                        1.0,
+                        1.0,
+                    )
+                    .unwrap();
+            }
 
-        for i in 0..MAX_GRAINS {
-            g.push_grain(
-                i,
-                BufferSlice::from_slice(&SLICE),
-                WindowFunction::Sine,
-                Source::AudioFile,
-                1.0,
-                1.0,
-            )
-            .unwrap();
+            assert!(GRAINS.grains.len() != 0);
+
+            GRAINS.flush();
+
+            assert!(GRAINS.grains.len() == 0);
         }
-
-        g.flush();
-
-        assert!(g.grains.len() == 0);
     }
 }

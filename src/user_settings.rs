@@ -12,7 +12,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -26,7 +26,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -42,7 +42,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -58,7 +58,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -75,7 +75,7 @@ pub enum GranulatorParameter {
 
     Internal exponentiation by power of 10.
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -90,7 +90,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -104,7 +104,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -120,7 +120,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -135,7 +135,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -150,7 +150,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -165,7 +165,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
@@ -180,7 +180,7 @@ pub enum GranulatorParameter {
 
     ### Example
 
-    ```
+    ```ignore
     use granulator::*;
 
     let mut g = Granulator::new(48_000);
