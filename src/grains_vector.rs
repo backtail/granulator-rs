@@ -23,13 +23,22 @@ impl GrainsVector {
         id: usize,
         sub_slice: BufferSlice,
         window: WindowFunction,
+        window_param: f32,
         source: Source,
         pitch: f32,
         velocity: f32,
     ) -> Result<(), usize> {
         if self
             .grains
-            .push(Grain::new(id, sub_slice, window, source, pitch, velocity))
+            .push(Grain::new(
+                id,
+                sub_slice,
+                window,
+                window_param,
+                source,
+                pitch,
+                velocity,
+            ))
             .is_err()
         {
             Err(id)

@@ -53,6 +53,10 @@ pub struct Parameters {
     pub sp_pitch: f32,
     pub sp_delay: f32,
     pub sp_velocity: f32,
+
+    // window function parameters
+    pub window_function: WindowFunction,
+    pub window_param: f32,
 }
 
 /// The brain of the granular synthesis algorithm.
@@ -65,9 +69,6 @@ pub struct Granulator {
     // user configurable
     pub settings: Parameters,
 
-    // parameter bounds
-    max_grain_size_in_ms: f32,
-
     // current random value
     random_offset_value: usize,
     random_grain_size_value: usize,
@@ -77,7 +78,7 @@ pub struct Granulator {
 
     // misc
     current_id_counter: usize,
-    pub fs: usize,
+    fs: usize,
 
     // RNG
     rng: Rand32,
@@ -120,9 +121,10 @@ impl Granulator {
                 sp_pitch: 0.0,
                 sp_delay: 0.0,
                 sp_velocity: 0.0,
-            },
 
-            max_grain_size_in_ms: 1000.0,
+                window_function: WindowFunction::Sine,
+                window_param: 0.0,
+            },
 
             random_offset_value: 0,
             random_grain_size_value: 480,
@@ -155,6 +157,8 @@ impl Granulator {
         self.set_parameter(PitchSpread, settings.sp_pitch);
         self.set_parameter(DelaySpread, settings.sp_delay);
         self.set_parameter(VelocitySpread, settings.sp_velocity);
+        self.set_window_function(settings.window_function);
+        self.set_parameter(WindowParam, settings.window_param);
     }
 
     // ==========================
@@ -169,6 +173,16 @@ impl Granulator {
             Ok(())
         } else {
             Err(fs)
+        }
+    }
+
+    pub fn set_window_function(&mut self, value: u8) {
+        match value {
+            0 => self.settings.window_function = WindowFunction::Sine,
+            1 => self.settings.window_function = WindowFunction::Hann,
+            2 => self.settings.window_function = WindowFunction::Hamming,
+            3 => self.settings.window_function = WindowFunction::Gaussian,
+            _ => {}
         }
     }
 
@@ -198,9 +212,7 @@ impl Granulator {
                     }
                 }
                 Pitch => self.settings.pitch = 10.0.powf(parameter_value * 2.0 - 1.0),
-                Delay => {
-                    self.settings.delay = Duration::from_millis((parameter_value * 1000.0) as u64)
-                }
+                Delay => self.settings.delay = Duration::from_secs((parameter_value) as u64),
                 Velocity => self.settings.velocity = parameter_value,
                 MasterVolume => self.settings.master_volume = parameter_value,
                 OffsetSpread => self.settings.sp_offset = parameter_value,
@@ -208,6 +220,7 @@ impl Granulator {
                 PitchSpread => self.settings.sp_pitch = parameter_value,
                 DelaySpread => self.settings.sp_delay = parameter_value,
                 VelocitySpread => self.settings.sp_velocity = parameter_value,
+                WindowParam => self.settings.window_param = parameter_value,
             }
         }
     }
@@ -248,6 +261,10 @@ impl Granulator {
         } else {
             0.0
         }
+    }
+
+    pub fn get_sample_rate(&self) -> usize {
+        self.fs
     }
 
     // ========================
@@ -309,6 +326,7 @@ impl Granulator {
                             .unwrap()
                             .get_sub_slice(offset, grain_size),
                         self.get_new_window(),
+                        self.settings.window_param,
                         self.get_new_source(),
                         pitch,
                         velocity,
@@ -376,7 +394,7 @@ impl Granulator {
     }
 
     fn get_new_window(&self) -> WindowFunction {
-        WindowFunction::Sine
+        self.settings.window_function
     }
 
     fn get_new_source(&self) -> Source {
@@ -455,9 +473,9 @@ impl Granulator {
             }
             Delay => {
                 let random_duration_in_ms =
-                    self.settings.sp_delay * get_random_unipolar_float(&mut self.rng) * 1000.0;
+                    self.settings.sp_delay * get_random_unipolar_float(&mut self.rng);
                 self.random_delay_value =
-                    self.settings.delay + Duration::from_millis(random_duration_in_ms as u64);
+                    self.settings.delay + Duration::from_secs(random_duration_in_ms as u64);
             }
             Velocity => {
                 self.random_velocity_value = self.settings.velocity

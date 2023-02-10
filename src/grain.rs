@@ -6,7 +6,7 @@ use super::window_function::WindowFunction;
 pub struct Grain {
     // envelope variables
     pub window: WindowFunction,
-    pub window_parameter: Option<f32>,
+    pub window_param: f32,
     pub envelope_position: f32, // between 0..grain_length (in samples)
     pub envelope_value: f32,    // between 0..1
 
@@ -31,13 +31,14 @@ impl Grain {
         id: usize,
         source_sub_slice: BufferSlice,
         window: WindowFunction,
+        window_param: f32,
         source: Source,
         pitch: f32,
         velocity: f32,
     ) -> Self {
         Grain {
             window,
-            window_parameter: None,
+            window_param,
             envelope_position: 0.0,
             envelope_value: 0.0,
 
@@ -61,7 +62,7 @@ impl Grain {
             self.envelope_value = self.window.get_envelope_value(
                 self.envelope_position,
                 self.source_sub_slice.length,
-                self.window_parameter,
+                self.window_param,
             );
 
             // finish grain if it reaches end

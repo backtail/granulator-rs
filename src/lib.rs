@@ -144,4 +144,4 @@ pub(crate) mod window_function;
 
 pub use crate::manager::Granulator;
 pub use crate::manager::MAX_GRAINS;
-pub use crate::user_settings::{GranulatorParameter, UserSettings};
+pub use crate::user_settings::UserSettings;
