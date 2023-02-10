@@ -146,7 +146,7 @@ impl Granulator {
         self.set_parameter(MasterVolume, settings.master_volume);
         self.set_parameter(ActiveGrains, settings.active_grains);
         self.set_parameter(Offset, settings.offset);
-        self.set_parameter(GrainSize, settings.grain_size_in_samples);
+        self.set_parameter(GrainSize, settings.grain_size);
         self.set_parameter(Pitch, settings.pitch);
         self.set_parameter(Delay, settings.delay);
         self.set_parameter(Velocity, settings.velocity);
