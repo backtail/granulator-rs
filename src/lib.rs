@@ -137,10 +137,8 @@ pub(crate) mod grain;
 pub(crate) mod grains_vector;
 pub(crate) mod pointer_wrapper;
 pub(crate) mod scheduler;
-pub(crate) mod source;
 pub(crate) mod statistics;
 pub(crate) mod user_settings;
-pub(crate) mod window_function;
 
 pub use crate::manager::Granulator;
 pub use crate::manager::MAX_GRAINS;

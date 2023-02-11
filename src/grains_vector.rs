@@ -1,19 +1,19 @@
 #![allow(dead_code)]
 
-use crate::source::Source;
-use crate::window_function::WindowFunction;
-
 use super::grain::Grain;
+use super::grain::WindowFunction;
 use super::manager::MAX_GRAINS;
 use super::pointer_wrapper::BufferSlice;
+
 use heapless::Vec;
+use num_traits::AsPrimitive;
 
 #[derive(Debug)]
-pub struct GrainsVector {
-    grains: Vec<Grain, MAX_GRAINS>,
+pub struct GrainsVector<T: AsPrimitive<f32>> {
+    grains: Vec<Grain<T>, MAX_GRAINS>,
 }
 
-impl GrainsVector {
+impl<T: AsPrimitive<f32>> GrainsVector<T> {
     pub fn new() -> Self {
         GrainsVector { grains: Vec::new() }
     }
@@ -21,10 +21,9 @@ impl GrainsVector {
     pub fn push_grain(
         &mut self,
         id: usize,
-        sub_slice: BufferSlice,
+        sub_slice: BufferSlice<T>,
         window: WindowFunction,
         window_param: f32,
-        source: Source,
         pitch: f32,
         velocity: f32,
     ) -> Result<(), usize> {
@@ -35,7 +34,6 @@ impl GrainsVector {
                 sub_slice,
                 window,
                 window_param,
-                source,
                 pitch,
                 velocity,
             ))
@@ -64,18 +62,18 @@ impl GrainsVector {
 
     // will always be processed in highest priority, therefore no Result
     pub fn get_next_sample(&mut self) -> f32 {
-        let mut sample = 0_f32;
+        let mut sample = 0.0;
         for grain in &mut self.grains {
             sample += grain.get_next_sample();
         }
         sample
     }
 
-    pub fn get_grains(&self) -> &Vec<Grain, MAX_GRAINS> {
+    pub fn get_grains(&self) -> &Vec<Grain<T>, MAX_GRAINS> {
         &self.grains
     }
 
-    pub fn get_mut_grains(&mut self) -> &mut Vec<Grain, MAX_GRAINS> {
+    pub fn get_mut_grains(&mut self) -> &mut Vec<Grain<T>, MAX_GRAINS> {
         &mut self.grains
     }
 }
@@ -94,7 +92,6 @@ mod tests {
             0,
             BufferSlice::from_slice(&SLICE),
             WindowFunction::Sine,
-            Source::AudioFile,
             1.0,
             1.0,
         )
@@ -115,7 +112,6 @@ mod tests {
             0,
             BufferSlice::from_slice(&SLICE),
             WindowFunction::Sine,
-            Source::AudioFile,
             1.0,
             1.0,
         )
@@ -134,7 +130,6 @@ mod tests {
                 i,
                 BufferSlice::from_slice(&SLICE),
                 WindowFunction::Sine,
-                Source::AudioFile,
                 1.0,
                 1.0,
             )

@@ -1,51 +1,52 @@
 use core::ops::Deref;
+use num_traits::AsPrimitive;
 
 /// Raw pointer that implements the `Send` trait since it's only acting on static memory
 ///
 /// Should always point at the beginning of your audio buffer in use
 #[derive(Debug)]
-pub struct BufferPointer(pub *const f32);
-unsafe impl Send for BufferPointer {}
+pub struct BufferPointer<T: AsPrimitive<f32>>(pub *const T);
+unsafe impl<T: AsPrimitive<f32>> Send for BufferPointer<T> {}
 
-impl BufferPointer {
-    pub fn add(&self, offset: usize) -> BufferPointer {
+impl<T: AsPrimitive<f32>> BufferPointer<T> {
+    pub fn add(&self, offset: usize) -> BufferPointer<T> {
         unsafe { BufferPointer(self.0.add(offset)) }
     }
 }
 
 /// Since we know that our pointer is always pointing at some buffer in memory, it can
 /// never be dangling. Thats's why it is safe to dereference it with `unsafe`.
-impl Deref for BufferPointer {
-    type Target = f32;
+impl<T: AsPrimitive<f32>> Deref for BufferPointer<T> {
+    type Target = T;
 
-    fn deref(&self) -> &Self::Target {
+    fn deref(&self) -> &T {
         unsafe { &*self.0 }
     }
 }
 
 #[derive(Debug)]
-pub struct BufferSlice {
-    pub ptr: BufferPointer,
-    pub length: f32,
+pub struct BufferSlice<T: AsPrimitive<f32>> {
+    pub ptr: BufferPointer<T>,
+    pub length: usize,
 }
 
-impl BufferSlice {
-    pub fn from_slice(slice: &[f32]) -> BufferSlice {
+impl<T: AsPrimitive<f32>> BufferSlice<T> {
+    pub fn from_slice(slice: &[T]) -> BufferSlice<T> {
         BufferSlice {
             ptr: BufferPointer(slice.as_ptr()),
-            length: slice.len() as f32,
+            length: slice.len(),
         }
     }
 
-    pub fn get_sub_slice(&self, mut offset: usize, mut length: f32) -> BufferSlice {
+    pub fn get_sub_slice(&self, mut offset: usize, mut length: usize) -> BufferSlice<T> {
         // truncate offset if too far
-        if offset >= self.length as usize {
-            offset = (self.length - 1.0) as usize;
+        if offset >= self.length {
+            offset = self.length - 1;
         }
 
         // afterwards truncate length if too long
-        if offset as f32 + length >= self.length {
-            length = self.length - offset as f32;
+        if offset + length >= self.length {
+            length = self.length - offset;
         }
 
         BufferSlice {
@@ -54,7 +55,7 @@ impl BufferSlice {
         }
     }
 
-    pub fn get_value_at(&self, position: usize) -> f32 {
-        *self.get_sub_slice(position, 1.0).ptr
+    pub fn get_f32_value_at(&self, position: usize) -> f32 {
+        self.get_sub_slice(position, 1).ptr.as_()
     }
 }

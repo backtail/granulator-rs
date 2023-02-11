@@ -12,13 +12,12 @@ use super::scheduler::Scheduler;
 use core::time::Duration;
 
 // crate specific
+use crate::grain::WindowFunction;
 use crate::grains_vector::GrainsVector;
 use crate::manager::GranulatorParameter::*;
 use crate::pointer_wrapper::BufferSlice;
-use crate::source::Source;
 use crate::statistics::*;
 use crate::user_settings::{GranulatorParameter, UserSettings};
-use crate::window_function::WindowFunction;
 
 // audio processing
 use super::audio_tools::soft_clip;
@@ -63,8 +62,8 @@ pub struct Parameters {
 #[derive(Debug)]
 pub struct Granulator {
     scheduler: Scheduler,
-    grains: GrainsVector,
-    audio_buffer: Option<BufferSlice>, // points to the beginning of the buffer
+    grains: GrainsVector<f32>,
+    audio_buffer: Option<BufferSlice<f32>>, // points to the beginning of the buffer
 
     // user configurable
     pub settings: Parameters,
@@ -198,8 +197,9 @@ impl Granulator {
                     self.settings.active_grains = (parameter_value * MAX_GRAINS as f32) as usize;
                 }
                 Offset => {
-                    self.settings.offset =
-                        (parameter_value * self.audio_buffer.as_ref().unwrap().length) as usize;
+                    self.settings.offset = (parameter_value
+                        * self.audio_buffer.as_ref().unwrap().length as f32)
+                        as usize;
                 }
                 GrainSize => {
                     let size_in_ms = parameter_value * 1000.0;
@@ -318,7 +318,7 @@ impl Granulator {
                 let velocity = self.get_new_velocity();
                 let pitch = self.get_new_pitch();
                 let offset = self.get_new_offset();
-                let grain_size = self.get_new_grain_size();
+                let grain_size = self.get_new_grain_size() as usize;
                 self.grains
                     .push_grain(
                         *id,
@@ -328,7 +328,6 @@ impl Granulator {
                             .get_sub_slice(offset, grain_size),
                         self.get_new_window(),
                         self.settings.window_param,
-                        self.get_new_source(),
                         pitch,
                         velocity,
                     )
@@ -398,10 +397,6 @@ impl Granulator {
         self.settings.window_function
     }
 
-    fn get_new_source(&self) -> Source {
-        Source::AudioFile
-    }
-
     fn get_new_pitch(&mut self) -> f32 {
         if self.settings.sp_pitch >= SPREAD_ESPILON {
             self.get_spreaded(Pitch);
@@ -451,7 +446,7 @@ impl Granulator {
     fn get_spreaded(&mut self, parameter: GranulatorParameter) {
         match parameter {
             Offset => {
-                let range = self.audio_buffer.as_ref().unwrap().length;
+                let range = self.audio_buffer.as_ref().unwrap().length as f32;
                 let random_offset = (self.settings.sp_offset
                     * get_random_bipolar_float(&mut self.rng)
                     * range) as isize;
@@ -460,7 +455,7 @@ impl Granulator {
                 self.random_offset_value = signed_offset.clamp(0, range as isize) as usize;
             }
             GrainSize => {
-                let range = self.audio_buffer.as_ref().unwrap().length;
+                let range = self.audio_buffer.as_ref().unwrap().length as f32;
                 let random_grain_size = (self.settings.sp_grain_size
                     * get_random_bipolar_float(&mut self.rng)
                     * range) as isize;
