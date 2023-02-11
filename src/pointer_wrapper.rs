@@ -1,3 +1,5 @@
+use core::ops::Deref;
+
 /// Raw pointer that implements the `Send` trait since it's only acting on static memory
 ///
 /// Should always point at the beginning of your audio buffer in use
@@ -11,7 +13,16 @@ impl BufferPointer {
     }
 }
 
-/// Raw slice pointer that implements the `Send` trait since it's only acting on static memory
+/// Since we know that our pointer is always pointing at some buffer in memory, it can
+/// never be dangling. Thats's why it is safe to dereference it with `unsafe`.
+impl Deref for BufferPointer {
+    type Target = f32;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.0 }
+    }
+}
+
 #[derive(Debug)]
 pub struct BufferSlice {
     pub ptr: BufferPointer,
@@ -43,7 +54,7 @@ impl BufferSlice {
         }
     }
 
-    pub fn as_slice(&self) -> *const [f32] {
-        core::ptr::slice_from_raw_parts(self.ptr.0, self.length as usize)
+    pub fn get_value_at(&self, position: usize) -> f32 {
+        *self.get_sub_slice(position, 1.0).ptr
     }
 }

@@ -1,4 +1,5 @@
-#![allow(dead_code)]
+use crate::pointer_wrapper::BufferSlice;
+
 #[derive(Debug)]
 pub enum Source {
     AudioFile,
@@ -7,19 +8,21 @@ pub enum Source {
 }
 
 impl Source {
-    pub fn get_source_sample_f32(&self, source_stream: *const [f32], position: f32) -> f32 {
+    pub fn get_source_sample_f32(&self, source_stream: &BufferSlice, position: f32) -> f32 {
         match self {
             Source::AudioFile => self.get_file_sample_f32_interpolated(source_stream, position),
             _ => 0.0,
         }
     }
 
-    fn get_file_sample_f32_interpolated(&self, source_stream: *const [f32], position: f32) -> f32 {
-        let trunc_position = position as usize;
-        let first = unsafe { (*source_stream)[trunc_position] };
-        let next = unsafe { (*source_stream)[trunc_position + 1] };
-
+    fn get_file_sample_f32_interpolated(&self, source_stream: &BufferSlice, position: f32) -> f32 {
+        // if source_stream.length != position {
+        let first = source_stream.get_value_at(position as usize);
+        let next = source_stream.get_value_at(position as usize + 1);
         (first + next) * 0.5
+        // } else {
+        //     source_stream.get_value_at(position as usize)
+        // }
     }
 }
 

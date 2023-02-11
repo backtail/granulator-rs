@@ -90,7 +90,7 @@ impl Grain {
             // interpolate source value
             self.source_value = self
                 .source
-                .get_source_sample_f32(self.source_sub_slice.as_slice(), self.source_position);
+                .get_source_sample_f32(&self.source_sub_slice, self.source_position);
         }
 
         self.source_value
