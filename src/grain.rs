@@ -1,6 +1,9 @@
 use super::pointer_wrapper::BufferSlice;
 
-use core::f32::consts::{PI, TAU};
+use core::{
+    f32::consts::{PI, TAU},
+    ops::Neg,
+};
 use num_traits::AsPrimitive;
 
 #[allow(unused_imports)]
@@ -20,18 +23,19 @@ pub enum WindowFunction {
 #[derive(Debug)]
 pub struct Grain<T: AsPrimitive<f32>> {
     // envelope variables
-    pub window: WindowFunction,
-    pub window_param: f32,
-    pub envelope_position: f32, // between 0..grain_length (in samples)
-    pub envelope_value: f32,    // between 0..1
+    window: WindowFunction,
+    window_param: f32,
+    envelope_position: f32, // between 0..grain_length (in samples)
+    envelope_value: f32,    // between 0..1
 
     // source variables
-    pub source_sub_slice: BufferSlice<T>, // slice as pointer of any numeric type
-    pub source_position: f32,             // between 0..grain_length (in samples)
-    pub source_value: f32,                // between 0..1
+    source_sub_slice: BufferSlice<T>, // slice as pointer of any numeric type
+    source_position: f32,             // between 0..grain_length (in samples)
+    source_value: f32,                // between 0..1
 
-    pub pitch: f32,
-    pub velocity: f32,
+    // parameters
+    pitch: f32,
+    velocity: f32,
 
     // grain variables
     pub finished: bool,
@@ -69,19 +73,17 @@ impl<T: AsPrimitive<f32>> Grain<T> {
     }
 
     fn get_envelope_value(&self) -> f32 {
-        let position = self.source_sub_slice.length as f32;
+        let size = self.source_sub_slice.length as f32;
         match self.window {
-            WindowFunction::Sine => ((PI * self.envelope_position) / position).sin(),
-            WindowFunction::Hann => 0.5 * (1.0 - (TAU * self.envelope_position / position).cos()),
-            WindowFunction::Hamming => {
-                0.54 * (0.46 - (TAU * self.envelope_position / position).cos())
-            }
+            WindowFunction::Sine => ((PI * self.envelope_position) / size).sin(),
+            WindowFunction::Hann => 0.5 * (1.0 - (TAU * self.envelope_position / size).cos()),
+            WindowFunction::Hamming => 0.54 * (0.46 - (TAU * self.envelope_position / size).cos()),
+
             WindowFunction::Gaussian => {
                 // window parameter
                 let sigma = 0.5 * (self.window_param + 0.01);
 
-                (((self.envelope_position - position / 2.0) / (sigma * position / 2.0)).powf(2.0)
-                    * -0.5)
+                (((self.envelope_position - size / 2.0) / (sigma * size / 2.0)).powf(2.0) * -0.5)
                     .exp()
             }
 
@@ -89,11 +91,30 @@ impl<T: AsPrimitive<f32>> Grain<T> {
                 // window parameter
                 let truncation = 2.5 * (self.window_param + 0.01);
 
-                let value = 1.0 / (2.0 * truncation)
-                    * (1.0 - (TAU * self.envelope_position / position).cos());
+                let value =
+                    1.0 / (2.0 * truncation) * (1.0 - (TAU * self.envelope_position / size).cos());
                 value.clamp(0.0, 1.0)
             }
-            _ => 0.0,
+            WindowFunction::Trapezodial => {
+                // window parameter
+                let slope = self.window_param * 5.0 + 1.0;
+                let step = self.envelope_position / size;
+                let incrementing = slope * step;
+                let decrementing = slope.neg() * (step - (slope - 1.0) / slope) + 1.0;
+                if step < 0.5 {
+                    if incrementing < 1.0 {
+                        incrementing
+                    } else {
+                        1.0
+                    }
+                } else {
+                    if decrementing < 1.0 {
+                        decrementing
+                    } else {
+                        1.0
+                    }
+                }
+            }
         }
     }
 
@@ -103,7 +124,7 @@ impl<T: AsPrimitive<f32>> Grain<T> {
         (first + next) * 0.5
     }
 
-    pub fn update_envelope(&mut self) -> f32 {
+    fn update_envelope(&mut self) -> f32 {
         if !self.finished {
             // calcualte new value
             self.envelope_value = self.get_envelope_value();
@@ -120,7 +141,7 @@ impl<T: AsPrimitive<f32>> Grain<T> {
         self.envelope_value
     }
 
-    pub fn update_source_sample(&mut self) -> f32 {
+    fn update_source_sample(&mut self) -> f32 {
         if !self.finished {
             // move playhead
             self.source_position += self.pitch;

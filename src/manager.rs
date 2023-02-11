@@ -182,6 +182,7 @@ impl Granulator {
             2 => self.settings.window_function = WindowFunction::Hamming,
             3 => self.settings.window_function = WindowFunction::Gaussian,
             4 => self.settings.window_function = WindowFunction::Tukey,
+            5 => self.settings.window_function = WindowFunction::Trapezodial,
             _ => {}
         }
     }
