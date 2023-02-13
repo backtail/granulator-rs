@@ -135,6 +135,7 @@ pub(crate) mod manager;
 pub(crate) mod audio_tools;
 pub(crate) mod grain;
 pub(crate) mod grains_vector;
+pub(crate) mod pitch;
 pub(crate) mod pointer_wrapper;
 pub(crate) mod scheduler;
 pub(crate) mod statistics;
