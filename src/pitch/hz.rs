@@ -2,6 +2,9 @@ use super::cents::{CentsInterval, CENT_OCTAVE, ET};
 
 use core::f32::consts::LN_2;
 
+#[allow(unused)]
+use micromath::F32Ext;
+
 // FREQUENCY CONSTS
 const MIN_HZ: f32 = 16.35; // C0
 const MAX_HZ: f32 = 7902.13; // B8
@@ -10,10 +13,12 @@ const MAX_HZ: f32 = 7902.13; // B8
 pub struct Hz(pub f32);
 
 impl Hz {
+    #[allow(unused)]
     pub fn interval(&self, to: Hz) -> CentsInterval {
         CentsInterval::new(CENT_OCTAVE as f32 * ((to.0 / self.0).ln()) / LN_2)
     }
 
+    #[allow(unused)]
     pub fn microtonal_interval(&self, to: Hz, tet: ET) -> CentsInterval {
         CentsInterval::new_microtonal(CENT_OCTAVE as f32 * ((to.0 / self.0).ln()) / LN_2, tet)
     }

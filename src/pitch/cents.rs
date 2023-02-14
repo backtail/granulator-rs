@@ -1,5 +1,8 @@
 use super::hz::{AudioFrequencies, Hz};
 
+#[allow(unused)]
+use micromath::F32Ext;
+
 // CENT INTERVAL CONTS
 pub const CENT_OCTAVE: u32 = 1200;
 const TWELVE_TONE: ET = ET(12);
@@ -45,6 +48,8 @@ impl CentsInterval {
     pub fn zero() -> CentsInterval {
         EMPTY_12TET_INTERVAL
     }
+
+    #[allow(unused)]
     pub fn new(cents: f32) -> CentsInterval {
         CentsInterval {
             cents,
@@ -56,6 +61,7 @@ impl CentsInterval {
         }
     }
 
+    #[allow(unused)]
     pub fn new_microtonal(cents: f32, equal_temperment: ET) -> CentsInterval {
         let tet = equal_temperment;
         let semitone_step = CENT_OCTAVE as f32 / tet.0 as f32;
@@ -69,34 +75,40 @@ impl CentsInterval {
         }
     }
 
+    #[allow(unused)]
     pub fn octave_only(&mut self) -> CentsInterval {
         self.semitone = 0;
         self.rest = 0;
         *self
     }
 
+    #[allow(unused)]
     pub fn semitone_only(&mut self) -> CentsInterval {
         self.octave = 0;
         self.rest = 0;
         *self
     }
 
+    #[allow(unused)]
     pub fn rest_only(&mut self) -> CentsInterval {
         self.octave = 0;
         self.semitone = 0;
         *self
     }
 
+    #[allow(unused)]
     pub fn to_hz(&self, from: Hz) -> Hz {
-        ((self.f32() / CENT_OCTAVE as f32).exp2() * from.0).hz()
+        (2.0.powf(self.cents / CENT_OCTAVE as f32) * from.0).hz()
     }
 
+    #[allow(unused)]
     fn f32(&self) -> f32 {
         (self.octave as i32 * CENT_OCTAVE as i32
             + self.semitone as i32 * (CENT_OCTAVE as f32 / self.tet.0 as f32) as i32
             + self.rest as i32) as f32
     }
 
+    #[allow(unused)]
     pub fn add_octave(&mut self, n: i32) -> CentsInterval {
         self.octave += n;
         self.calc_cents();
@@ -116,6 +128,7 @@ impl CentsInterval {
         *self
     }
 
+    #[allow(unused)]
     pub fn add_rest(&mut self, n: i32) -> CentsInterval {
         let max_rest = self.semitone_step as i32;
         if n.abs() >= max_rest {
@@ -135,7 +148,8 @@ impl CentsInterval {
             + self.rest as f32;
     }
 
+    #[inline(always)]
     pub fn ratio(&self) -> f32 {
-        (self.cents / CENT_OCTAVE as f32).exp2()
+        2.0.powf(self.cents / CENT_OCTAVE as f32)
     }
 }

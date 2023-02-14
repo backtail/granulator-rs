@@ -36,6 +36,10 @@ pub struct UserSettings {
     // window function parameters
     pub window_function: u8,
     pub window_param: f32,
+
+    // musical pitch
+    pub scale: u8,
+    pub mode: u8,
 }
 
 impl UserSettings {
@@ -57,6 +61,9 @@ impl UserSettings {
 
             window_function: 0,
             window_param: 0.0,
+
+            scale: 0,
+            mode: 0,
         }
     }
 }

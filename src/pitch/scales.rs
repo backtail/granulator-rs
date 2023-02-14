@@ -42,6 +42,7 @@ pub type HeptatonicRatios = [f32; HEPTATONIC];
 pub type HeptatonicSemitones = [u32; HEPTATONIC];
 
 /// Types of classical tone intervals
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum ClassicalIntervals {
     Unison = 0,
@@ -59,6 +60,8 @@ pub enum ClassicalIntervals {
     Octave = 12,
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
 pub enum ModeType {
     /// Major
     Ionian = 0,
@@ -71,6 +74,8 @@ pub enum ModeType {
     Locrian = 6,
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
 pub enum ScaleType {
     Diatonic = 0,
     Melodic = 1,
