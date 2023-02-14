@@ -12,12 +12,12 @@ use micromath::F32Ext;
 /// All possible window functions that can be applied to a given audio source
 #[derive(Debug, Clone, Copy)]
 pub enum WindowFunction {
-    Trapezodial,
-    Gaussian,
     Sine,
     Hann,
     Hamming,
+    Gaussian,
     Tukey,
+    Trapezodial,
 }
 
 #[derive(Debug)]
@@ -118,9 +118,13 @@ impl<T: AsPrimitive<f32>> Grain<T> {
         }
     }
 
-    fn get_source_sample_interpolated(&self, source_stream: &BufferSlice<T>, position: f32) -> f32 {
-        let first = source_stream.get_f32_value_at(position as usize);
-        let next = source_stream.get_f32_value_at(position as usize + 1);
+    fn get_source_sample_interpolated(
+        &self,
+        source_stream: &BufferSlice<T>,
+        position: &f32,
+    ) -> f32 {
+        let first = source_stream.get_f32_value_at(&mut (*position as usize));
+        let next = source_stream.get_f32_value_at(&mut (*position as usize + 1));
         (first + next) * 0.5
     }
 
@@ -153,7 +157,7 @@ impl<T: AsPrimitive<f32>> Grain<T> {
 
             // interpolate source value
             self.source_value =
-                self.get_source_sample_interpolated(&self.source_sub_slice, self.source_position);
+                self.get_source_sample_interpolated(&self.source_sub_slice, &self.source_position);
         }
 
         self.source_value

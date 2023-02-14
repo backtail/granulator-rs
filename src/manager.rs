@@ -19,6 +19,10 @@ use crate::pointer_wrapper::BufferSlice;
 use crate::statistics::*;
 use crate::user_settings::{GranulatorParameter, UserSettings};
 
+// pitch specific
+use crate::pitch::{self, ScaleType};
+use crate::pitch::{ModeType, Ratio};
+
 // audio processing
 use super::audio_tools::soft_clip;
 
@@ -56,6 +60,10 @@ pub struct Parameters {
     // window function parameters
     pub window_function: WindowFunction,
     pub window_param: f32,
+
+    // musical pitch and scales
+    pub scale: pitch::ScaleType,
+    pub mode: pitch::ModeType,
 }
 
 /// The brain of the granular synthesis algorithm.
@@ -66,7 +74,7 @@ pub struct Granulator {
     audio_buffer: Option<BufferSlice<f32>>, // points to the beginning of the buffer
 
     // user configurable
-    pub settings: Parameters,
+    settings: Parameters,
 
     // current random value
     random_offset_value: usize,
@@ -74,6 +82,9 @@ pub struct Granulator {
     random_pitch_value: f32,
     random_delay_value: Duration,
     random_velocity_value: f32,
+
+    // pitch related
+    pitch_ratios: pitch::HeptatonicRatios,
 
     // misc
     current_id_counter: usize,
@@ -101,6 +112,10 @@ impl Granulator {
         let random_seed = 0;
         let random_memory_location = core::ptr::addr_of!(random_seed);
 
+        let scale = pitch::ScaleType::HarmonicMinor;
+        let mode = pitch::ModeType::Mixolydian;
+        let pitch_ratios = pitch::get_ratios_for(scale, mode);
+
         Granulator {
             scheduler: Scheduler::new(),
             grains: GrainsVector::new(),
@@ -123,6 +138,9 @@ impl Granulator {
 
                 window_function: WindowFunction::Sine,
                 window_param: 0.0,
+
+                scale,
+                mode,
             },
 
             random_offset_value: 0,
@@ -130,6 +148,8 @@ impl Granulator {
             random_pitch_value: 1.0,
             random_delay_value: Duration::ZERO,
             random_velocity_value: 1.0,
+
+            pitch_ratios,
 
             current_id_counter: 0,
             fs,
@@ -158,6 +178,8 @@ impl Granulator {
         self.set_parameter(VelocitySpread, settings.sp_velocity);
         self.set_window_function(settings.window_function);
         self.set_parameter(WindowParam, settings.window_param);
+        self.set_scale(settings.scale);
+        self.set_mode(settings.mode);
     }
 
     // ==========================
@@ -183,6 +205,33 @@ impl Granulator {
             3 => self.settings.window_function = WindowFunction::Gaussian,
             4 => self.settings.window_function = WindowFunction::Tukey,
             5 => self.settings.window_function = WindowFunction::Trapezodial,
+            _ => {}
+        }
+
+        self.pitch_ratios = pitch::get_ratios_for(self.settings.scale, self.settings.mode);
+    }
+
+    pub fn set_scale(&mut self, value: u8) {
+        match value {
+            0 => self.settings.scale = ScaleType::Diatonic,
+            1 => self.settings.scale = ScaleType::Melodic,
+            2 => self.settings.scale = ScaleType::MarmonicMajor,
+            3 => self.settings.scale = ScaleType::HarmonicMinor,
+            _ => {}
+        }
+
+        self.pitch_ratios = pitch::get_ratios_for(self.settings.scale, self.settings.mode);
+    }
+
+    pub fn set_mode(&mut self, value: u8) {
+        match value {
+            0 => self.settings.mode = ModeType::Ionian,
+            1 => self.settings.mode = ModeType::Dorian,
+            2 => self.settings.mode = ModeType::Phrygian,
+            3 => self.settings.mode = ModeType::Lydian,
+            4 => self.settings.mode = ModeType::Mixolydian,
+            5 => self.settings.mode = ModeType::Aeolian,
+            6 => self.settings.mode = ModeType::Locrian,
             _ => {}
         }
     }
@@ -318,15 +367,15 @@ impl Granulator {
             for id in ids {
                 let velocity = self.get_new_velocity();
                 let pitch = self.get_new_pitch();
-                let offset = self.get_new_offset();
-                let grain_size = self.get_new_grain_size() as usize;
+                let mut offset = self.get_new_offset();
+                let mut grain_size = self.get_new_grain_size() as usize;
                 self.grains
                     .push_grain(
                         *id,
                         self.audio_buffer
                             .as_ref()
                             .unwrap()
-                            .get_sub_slice(offset, grain_size),
+                            .get_sub_slice(&mut offset, &mut grain_size),
                         self.get_new_window(),
                         self.settings.window_param,
                         pitch,
@@ -410,9 +459,9 @@ impl Granulator {
                 random_pitch = 10.0;
             }
 
-            random_pitch
+            random_pitch.autotune_to(Some(self.pitch_ratios))
         } else {
-            self.settings.pitch
+            self.settings.pitch.autotune_to(Some(self.pitch_ratios))
         }
     }
 

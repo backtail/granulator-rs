@@ -143,4 +143,9 @@ pub(crate) mod user_settings;
 
 pub use crate::manager::Granulator;
 pub use crate::manager::MAX_GRAINS;
+
 pub use crate::user_settings::UserSettings;
+
+pub use crate::grain::WindowFunction;
+
+pub use crate::pitch::{ModeType, ScaleType};

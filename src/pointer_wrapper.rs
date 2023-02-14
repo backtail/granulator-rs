@@ -38,24 +38,24 @@ impl<T: AsPrimitive<f32>> BufferSlice<T> {
         }
     }
 
-    pub fn get_sub_slice(&self, mut offset: usize, mut length: usize) -> BufferSlice<T> {
+    pub fn get_sub_slice(&self, offset: &mut usize, length: &mut usize) -> BufferSlice<T> {
         // truncate offset if too far
-        if offset >= self.length {
-            offset = self.length - 1;
+        if *offset >= self.length {
+            *offset = self.length - 1;
         }
 
         // afterwards truncate length if too long
-        if offset + length >= self.length {
-            length = self.length - offset;
+        if *offset + *length >= self.length {
+            *length = self.length - *offset;
         }
 
         BufferSlice {
-            ptr: self.ptr.add(offset),
-            length: length,
+            ptr: self.ptr.add(*offset),
+            length: *length,
         }
     }
 
-    pub fn get_f32_value_at(&self, position: usize) -> f32 {
-        self.get_sub_slice(position, 1).ptr.as_()
+    pub fn get_f32_value_at(&self, position: &mut usize) -> f32 {
+        self.get_sub_slice(position, &mut 1).ptr.as_()
     }
 }
