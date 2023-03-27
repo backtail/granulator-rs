@@ -7,16 +7,11 @@ use heapless::Vec;
 pub struct TimeInfo {
     pub id: usize,
     start: Duration,
-    has_started: bool,
 }
 
 impl TimeInfo {
     fn new(id: usize, start: Duration) -> Self {
-        TimeInfo {
-            id,
-            start,
-            has_started: false,
-        }
+        TimeInfo { id, start }
     }
 }
 
@@ -41,10 +36,11 @@ impl Scheduler {
         let mut return_vec = Vec::new();
 
         // assert if grains crossed the start time
-        for future_grain in &mut self.future_vector {
-            if future_grain.start <= self.master_clock_counter && !future_grain.has_started {
-                future_grain.has_started = true;
-                return_vec.push(future_grain.id).unwrap();
+        for i in (0..self.future_vector.len()).rev() {
+            if self.future_vector[i].start <= self.master_clock_counter {
+                return_vec
+                    .push(self.future_vector.swap_remove(i).id)
+                    .unwrap();
             }
         }
 
@@ -54,23 +50,6 @@ impl Scheduler {
     pub fn schedule_grain(&mut self, id: usize, delay: Duration) -> Result<(), TimeInfo> {
         self.future_vector
             .push(TimeInfo::new(id, self.master_clock_counter + delay))
-    }
-
-    pub fn remove_grain(&mut self, id: usize) -> Result<(), usize> {
-        let mut remove_id = None;
-        for (vector_id, grain) in self.future_vector.iter_mut().enumerate() {
-            if grain.id == id {
-                remove_id = Some(vector_id);
-                break;
-            }
-        }
-
-        if remove_id.is_some() {
-            self.future_vector.remove(remove_id.unwrap());
-            return Ok(());
-        } else {
-            Err(id)
-        }
     }
 }
 

@@ -346,19 +346,19 @@ impl Granulator {
         }
     }
 
-    fn remove_finished_grains(&mut self) {
-        // collect all finished grain ids
-        let mut remove_ids: Vec<usize, MAX_GRAINS> = Vec::new();
-        for grain in self.grains.get_mut_grains() {
-            if grain.finished {
-                remove_ids.push(grain.id).unwrap();
-            }
-        }
+    fn spawn_future_grains(&mut self) {
+        // the difference between active grains parameter and already spawned grains, but never less than zero
+        let to_be_spawned = self
+            .settings
+            .active_grains
+            .checked_sub(self.grains.get_grains().len())
+            .unwrap_or(0);
 
-        // remove all finished active grains
-        for id in remove_ids {
-            self.scheduler.remove_grain(id).unwrap();
-            self.grains.remove_grain(id).unwrap();
+        // spawn future grains
+        for _ in 0..to_be_spawned {
+            let id = self.get_new_id();
+            let delay = self.get_new_delay();
+            self.scheduler.schedule_grain(id, delay).ok();
         }
     }
 
@@ -386,19 +386,13 @@ impl Granulator {
         }
     }
 
-    fn spawn_future_grains(&mut self) {
-        // the difference between all future grains and number of active grains should be spawned, but never less than zero
-        let to_be_spawned = self
-            .settings
-            .active_grains
-            .checked_sub(self.scheduler.future_vector.len())
-            .unwrap_or(0);
+    fn remove_finished_grains(&mut self) {
+        let grains_vector = self.grains.get_mut_grains();
 
-        // spawn future grains
-        for _ in 0..to_be_spawned {
-            let id = self.get_new_id();
-            let delay = self.get_new_delay();
-            self.scheduler.schedule_grain(id, delay).ok();
+        for i in (0..grains_vector.len()).rev() {
+            if grains_vector[i].finished {
+                grains_vector.swap_remove(i);
+            }
         }
     }
 
