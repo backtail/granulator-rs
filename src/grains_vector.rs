@@ -48,7 +48,7 @@ impl<T: AsPrimitive<f32>> GrainsVector<T> {
     pub fn remove_grain(&mut self, id: usize) -> Result<(), usize> {
         for (vector_id, grain) in self.grains.iter_mut().enumerate() {
             if grain.id == id {
-                self.grains.remove(vector_id);
+                self.grains.swap_remove(vector_id);
                 return Ok(());
             }
         }
