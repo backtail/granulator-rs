@@ -1,3 +1,5 @@
+use core::sync::atomic::{AtomicBool, Ordering::Relaxed};
+
 // data management
 use heapless::Vec;
 
@@ -41,10 +43,10 @@ const MAX_DELAY_IN_MS: f32 = 3000.0;
 const MAX_PITCH_RANGE: f32 = 2.0;
 const MASTER_VOLUME_RANGE: f32 = 5.0;
 
-pub static mut BUFFER_IS_LOADED: bool = false;
+static BUFFER_IS_LOADED: AtomicBool = AtomicBool::new(false);
 
-fn is_buffer_loaded() -> bool {
-    unsafe { BUFFER_IS_LOADED }
+pub fn is_buffer_loaded() -> bool {
+    BUFFER_IS_LOADED.load(Relaxed)
 }
 
 // ==============
@@ -160,18 +162,14 @@ impl Granulator {
         // create slice buffer
         self.audio_buffer = Some(BufferSlice::from_slice(buffer));
         self.buffer_length = Some(self.audio_buffer.as_ref().unwrap().length);
-        unsafe {
-            BUFFER_IS_LOADED = true;
-        }
+        BUFFER_IS_LOADED.store(true, Relaxed);
     }
 
     /// Removes current audio buffer and stops the algorithm
     pub fn remove_audio_buffer(&mut self) {
         self.audio_buffer = None;
         self.buffer_length = None;
-        unsafe {
-            BUFFER_IS_LOADED = false;
-        }
+        BUFFER_IS_LOADED.store(false, Relaxed);
     }
 
     // ====================
